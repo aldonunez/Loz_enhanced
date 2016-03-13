@@ -147,10 +147,18 @@
     <ClInclude Include="World.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="tileShaderPixel.glsl" />
-    <None Include="tileShaderPixel.hlsl" />
-    <None Include="tileShaderVertex.glsl" />
-    <None Include="tileShaderVertex.hlsl" />
+    <None Include="tileShaderPixel.glsl">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="tileShaderPixel.hlsl">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="tileShaderVertex.glsl">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="tileShaderVertex.hlsl">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Loz.rc" />
