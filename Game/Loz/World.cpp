@@ -753,7 +753,7 @@ void World::LoadLevel( int level )
 {
     LevelDirectory::FixedString levelDirName = "";
 
-    sprintf_s( levelDirName, "levelDir_%d_%d.dat", 0, level );
+    sprintf_s( levelDirName, "levelDir_%d_%d.dat", profile.Quest, level );
 
     Util::LoadList( levelDirName, &directory, 1 );
 
@@ -831,8 +831,6 @@ void World::LoadLevel( int level )
     player->SetFacing( facing );
 
     // Replace room attributes, if in second quest.
-
-    // TODO: There's more to do for underworld levels.
 
     if ( level == 0 && profile.Quest == 1 )
     {

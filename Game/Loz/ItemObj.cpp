@@ -1762,6 +1762,7 @@ Person::Person( ObjType type, int x, int y, const CaveSpec* spec )
             World::Get()->OpenShutters();
             World::SetPersonWallY( 0 );
             isDeleted = true;
+            return;
         }
     }
 

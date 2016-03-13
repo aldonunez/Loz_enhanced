@@ -2049,13 +2049,17 @@ namespace ExtractLoz
             dir.ObjLists = "objLists.tab";
             dir.Extra1 = "overworldRoomSparseAttr.tab";
             WriteLevelDir( options, 0, 0, dir );
+            WriteLevelDir( options, 1, 0, dir );
         }
 
         private static void ExtractUnderworldInfo( Options options )
         {
-            for ( int level = 1; level < 10; level++ )
+            for ( int quest = 0; quest < 2; quest++ )
             {
-                ExtractUnderworldInfo( options, 0, level );
+                for ( int level = 1; level < 10; level++ )
+                {
+                    ExtractUnderworldInfo( options, quest, level );
+                }
             }
         }
 
@@ -2089,16 +2093,46 @@ namespace ExtractLoz
             "uwBossSheet9.tab",
         };
 
+        const int InfoBlockDiffPtrs = 0x183A4 + 0x10;
+        const int FirstInfoBlockDiff = 0x1816F + 0x10;
+
+        const int InfoBlockDiffEffectiveLevelNumber = 0xA;
+        const int InfoBlockDiffStartRoomId = 6;
+        const int InfoBlockDiffTriforceRoomId = 7;
+        const int InfoBlockDiffBossRoomId = 0x15;
+        const int InfoBlockDiffDrawnMapOffset = 4;
+        const int InfoBlockDiffCellarRoomIdArray = 0xB;
+        const int InfoBlockDiffDrawnMap = 0x16;
+
         private static void ExtractUnderworldInfo( Options options, int quest, int level )
         {
             var filename = string.Format( "levelInfo_{0}_{1}.dat", quest, level );
             var filePath = options.MakeOutPath( filename );
+            int effectiveLevel = level;
 
             using ( var reader = new BinaryReader( File.OpenRead( options.RomPath ) ) )
             using ( var writer = new BinaryWriter( Utility.TruncateFile( filePath ) ) )
             {
+                int quest2DiffAddr = 0;
+
+                if ( quest == 1 )
+                {
+                    reader.BaseStream.Position = InfoBlockDiffPtrs;
+                    ushort firstPtr = reader.ReadUInt16();
+                    reader.BaseStream.Position = InfoBlockDiffPtrs + (level - 1) * 2;
+                    ushort ptr = reader.ReadUInt16();
+                    quest2DiffAddr = (ptr - firstPtr) + FirstInfoBlockDiff;
+
+                    reader.BaseStream.Position = quest2DiffAddr + InfoBlockDiffEffectiveLevelNumber;
+                    effectiveLevel = reader.ReadByte();
+
+                    reader.BaseStream.Position = InfoBlockDiffPtrs + (effectiveLevel - 1) * 2;
+                    ptr = reader.ReadUInt16();
+                    quest2DiffAddr = (ptr - firstPtr) + FirstInfoBlockDiff;
+                }
+
                 const int PaletteByteCount = 8 * 4;
-                int blockOffset = InfoBlockSize * (quest * 10 + level);
+                int blockOffset = InfoBlockSize * effectiveLevel;
 
                 reader.BaseStream.Position = OWInfoBlock + blockOffset + InfoBlockPalettesOffset;
                 byte[] paletteBytes = reader.ReadBytes( PaletteByteCount );
@@ -2125,30 +2159,52 @@ namespace ExtractLoz
                 byte startY = reader.ReadByte();
                 writer.Write( startY );
 
-                reader.BaseStream.Position = OWInfoBlock + blockOffset + InfoBlockStartRoomId;
+                if ( quest == 0 )
+                    reader.BaseStream.Position = OWInfoBlock + blockOffset + InfoBlockStartRoomId;
+                else
+                    reader.BaseStream.Position = quest2DiffAddr + InfoBlockDiffStartRoomId;
                 byte startRoomId = reader.ReadByte();
                 writer.Write( startRoomId );
 
-                reader.BaseStream.Position = OWInfoBlock + blockOffset + InfoBlockTriforceRoomId;
+                if ( quest == 0 )
+                    reader.BaseStream.Position = OWInfoBlock + blockOffset + InfoBlockTriforceRoomId;
+                else
+                    reader.BaseStream.Position = quest2DiffAddr + InfoBlockDiffTriforceRoomId;
                 byte triforceRoomId = reader.ReadByte();
                 writer.Write( triforceRoomId );
 
-                reader.BaseStream.Position = OWInfoBlock + blockOffset + InfoBlockBossRoomId;
+                if ( quest == 0 )
+                    reader.BaseStream.Position = OWInfoBlock + blockOffset + InfoBlockBossRoomId;
+                else
+                    reader.BaseStream.Position = quest2DiffAddr + InfoBlockDiffBossRoomId;
                 byte bossRoomId = reader.ReadByte();
                 writer.Write( bossRoomId );
 
                 byte song = (byte) (level < 9 ? 3 : 7);
                 writer.Write( song );
 
-                reader.BaseStream.Position = OWInfoBlock + blockOffset + InfoBlockLevelNumber;
-                byte levelNumber = reader.ReadByte();
-                writer.Write( levelNumber );
+                if ( quest == 0 )
+                {
+                    reader.BaseStream.Position = OWInfoBlock + blockOffset + InfoBlockLevelNumber;
+                    byte levelNumber = reader.ReadByte();
+                    writer.Write( levelNumber );
+                }
+                else
+                {
+                    writer.Write( (byte) level );
+                }
 
-                reader.BaseStream.Position = OWInfoBlock + blockOffset + InfoBlockDrawnMapOffset;
+                if ( quest == 0 )
+                    reader.BaseStream.Position = OWInfoBlock + blockOffset + InfoBlockDrawnMapOffset;
+                else
+                    reader.BaseStream.Position = quest2DiffAddr + InfoBlockDiffDrawnMapOffset;
                 byte mapOffset = reader.ReadByte();
                 writer.Write( mapOffset );
 
-                reader.BaseStream.Position = OWInfoBlock + blockOffset + InfoBlockCellarRoomIdArray;
+                if ( quest == 0 )
+                    reader.BaseStream.Position = OWInfoBlock + blockOffset + InfoBlockCellarRoomIdArray;
+                else
+                    reader.BaseStream.Position = quest2DiffAddr + InfoBlockDiffCellarRoomIdArray;
                 byte[] cellarRoomIds = reader.ReadBytes( InfoBlockCellarRoomIdCount );
                 if ( quest == 0 && level == 3 )
                     cellarRoomIds[0] = 0x0F;
@@ -2158,7 +2214,10 @@ namespace ExtractLoz
                 byte[] shortcutPos = reader.ReadBytes( InfoBlockShortcutPosCount );
                 writer.Write( shortcutPos );
 
-                reader.BaseStream.Position = OWInfoBlock + blockOffset + InfoBlockDrawnMap;
+                if ( quest == 0 )
+                    reader.BaseStream.Position = OWInfoBlock + blockOffset + InfoBlockDrawnMap;
+                else
+                    reader.BaseStream.Position = quest2DiffAddr + InfoBlockDiffDrawnMap;
                 var drawnMap = reader.ReadBytes( 16 );
                 writer.Write( drawnMap );
 
@@ -2190,8 +2249,8 @@ namespace ExtractLoz
                 levelGroup += 2;
 
             string roomAttrFilename = string.Format( "underworldRoomAttr{0}.dat", levelGroup );
-            string bossImageFilename = bossImageFilenames[level];
-            string bossSheetFilename = bossSheetFilenames[level];
+            string bossImageFilename = bossImageFilenames[effectiveLevel];
+            string bossSheetFilename = bossSheetFilenames[effectiveLevel];
 
             // TODO: Some of these are for the OW, until we extract the matching UW parts.
 
