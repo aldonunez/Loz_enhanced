@@ -1,0 +1,13 @@
+^\.svn/
+^bin$
+^Tools/ExtractLoz/bin/
+^Tools/ExtractLoz/obj/
+^Tools/ExtractNsf/bin/
+^Tools/ExtractNsf/obj/
+^ipch/
+\.opensdf$
+\.sdf$
+\.csproj\.user$
+\.vcxproj\.user$
+\.aps$
+\.suo$

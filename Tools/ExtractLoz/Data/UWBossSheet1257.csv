@@ -1,0 +1,14 @@
+name,length,width,height,,x,y,flags,,x,y,flags,,x,y,flags
+Aquamentus,2,24,32,,0,0,0,,24,0,0
+Aquamentus_Mouth_Open,1,8,16,,96,32,0
+Aquamentus_Mouth_Closed,1,8,16,,104,32,0
+Digdogger_Big,1,32,32,,48,0,0
+Digdogger_Little,2,16,16,,80,0,0,,80,16,0
+Dodongo_R,2,32,16,,96,0,0,,96,16,0
+Dodongo_L,2,32,16,,96,0,1,,96,16,1
+Dodongo_D,2,16,16,,32,32,0,,32,32,1
+Dodongo_U,2,16,16,,64,32,0,,64,32,1
+Dodongo_Bloated_R,1,32,16,,0,32,0
+Dodongo_Bloated_L,1,32,16,,0,32,1
+Dodongo_Bloated_D,1,16,16,,48,32,0
+Dodongo_Bloated_U,1,16,16,,80,32,0

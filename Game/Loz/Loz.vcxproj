@@ -1,0 +1,173 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{28E8319D-153E-4527-9AAF-8DEDCA6ED3BB}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>Loz</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <OutDir>$(SolutionDir)bin\$(Configuration)\</OutDir>
+    <IntDir>$(OutDir)$(ProjectName)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(SolutionDir)bin\$(Configuration)\</OutDir>
+    <IntDir>$(OutDir)$(ProjectName)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ALLEGRO_INC_ROOT)\include;$(ALLEGRO_INC_ROOT)\build\include;$(ALLEGRO_INC_ROOT)\addons\audio;$(ALLEGRO_INC_ROOT)\addons\acodec;$(ALLEGRO_INC_ROOT)\addons\image;$(ALLEGRO_INC_ROOT)\addons\primitives;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeaderFile>Common.h</PrecompiledHeaderFile>
+      <DisableSpecificWarnings>4345;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(ALLEGRO_LIB_ROOT);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>allegro.lib;allegro_main.lib;allegro_audio.lib;allegro_acodec.lib;allegro_image.lib;allegro_dialog.lib;allegro_primitives.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(ALLEGRO_INC_ROOT)\include;$(ALLEGRO_INC_ROOT)\build\include;$(ALLEGRO_INC_ROOT)\addons\audio;$(ALLEGRO_INC_ROOT)\addons\acodec;$(ALLEGRO_INC_ROOT)\addons\image;$(ALLEGRO_INC_ROOT)\addons\primitives;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeaderFile>Common.h</PrecompiledHeaderFile>
+      <DisableSpecificWarnings>4345;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>$(ALLEGRO_LIB_ROOT);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>allegro.lib;allegro_main.lib;allegro_audio.lib;allegro_acodec.lib;allegro_image.lib;allegro_dialog.lib;allegro_primitives.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="Common.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Common.h</PrecompiledHeaderFile>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Common.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="Credits.cpp" />
+    <ClCompile Include="EliminateMenu.cpp" />
+    <ClCompile Include="GameMenu.cpp" />
+    <ClCompile Include="Graphics.cpp" />
+    <ClCompile Include="Input.cpp" />
+    <ClCompile Include="ItemObj.cpp" />
+    <ClCompile Include="Loz.cpp" />
+    <ClCompile Include="Monsters.cpp" />
+    <ClCompile Include="Object.cpp" />
+    <ClCompile Include="Player.cpp" />
+    <ClCompile Include="Profile.cpp" />
+    <ClCompile Include="RegisterMenu.cpp" />
+    <ClCompile Include="SaveFolder.cpp" />
+    <ClCompile Include="Sound.cpp" />
+    <ClCompile Include="SpriteAnimator.cpp" />
+    <ClCompile Include="StatusBar.cpp" />
+    <ClCompile Include="Submenu.cpp" />
+    <ClCompile Include="TextBox.cpp" />
+    <ClCompile Include="Util.cpp" />
+    <ClCompile Include="World.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Common.h" />
+    <ClInclude Include="Credits.h" />
+    <ClInclude Include="EliminateMenu.h" />
+    <ClInclude Include="GameMenu.h" />
+    <ClInclude Include="Menu.h" />
+    <ClInclude Include="Global.h" />
+    <ClInclude Include="Graphics.h" />
+    <ClInclude Include="Input.h" />
+    <ClInclude Include="ItemObj.h" />
+    <ClInclude Include="Monsters.h" />
+    <ClInclude Include="Object.h" />
+    <ClInclude Include="ObjType.h" />
+    <ClInclude Include="OWNpcsAnim.h" />
+    <ClInclude Include="Player.h" />
+    <ClInclude Include="PlayerItemsAnim.h" />
+    <ClInclude Include="Profile.h" />
+    <ClInclude Include="RcId.h" />
+    <ClInclude Include="RegisterMenu.h" />
+    <ClInclude Include="RoomAttrs.h" />
+    <ClInclude Include="SaveFolder.h" />
+    <ClInclude Include="Sound.h" />
+    <ClInclude Include="SoundId.h" />
+    <ClInclude Include="SpriteAnimator.h" />
+    <ClInclude Include="StatusBar.h" />
+    <ClInclude Include="Submenu.h" />
+    <ClInclude Include="TextBox.h" />
+    <ClInclude Include="TileAttr.h" />
+    <ClInclude Include="Util.h" />
+    <ClInclude Include="UWBossAnim.h" />
+    <ClInclude Include="UWNpcsAnim.h" />
+    <ClInclude Include="World.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="tileShaderPixel.glsl" />
+    <None Include="tileShaderPixel.hlsl" />
+    <None Include="tileShaderVertex.glsl" />
+    <None Include="tileShaderVertex.hlsl" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Loz.rc" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+  <ItemGroup>
+    <AllegroDlls Include="$(ALLEGRO_LIB_ROOT)\allegro-5.1.dll" />
+    <AllegroDlls Include="$(ALLEGRO_LIB_ROOT)\allegro_main-5.1.dll" />
+    <AllegroDlls Include="$(ALLEGRO_LIB_ROOT)\allegro_audio-5.1.dll" />
+    <AllegroDlls Include="$(ALLEGRO_LIB_ROOT)\allegro_acodec-5.1.dll" />
+    <AllegroDlls Include="$(ALLEGRO_LIB_ROOT)\allegro_image-5.1.dll" />
+    <AllegroDlls Include="$(ALLEGRO_LIB_ROOT)\allegro_dialog-5.1.dll" />
+    <AllegroDlls Include="$(ALLEGRO_LIB_ROOT)\allegro_primitives-5.1.dll" />
+  </ItemGroup>
+  <Target Name="AfterBuild">
+    <Copy SkipUnchangedFiles="true" SourceFiles="@(AllegroDlls)" DestinationFolder="$(OutDir)" />
+  </Target>
+</Project>

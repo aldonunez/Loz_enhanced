@@ -1,0 +1,13 @@
+track,begin,end,slot,priority,flags,filename
+0,0,4800,0,1,0,intro.wav
+1,1920,3840,0,2,0,ending.wav
+2,384,2304,0,3,0,overworld.wav
+3,0,1160,0,4,0,underworld.wav
+4,0,84,0,5,0,item_lift.wav
+5,0,444,0,6,0,triforce.wav
+6,0,188,0,7,0,ganon.wav
+7,0,1344,0,8,0,level9.wav
+8,0,640,0,9,0,game_over.wav
+9,0,180,0,10,0,death.wav
+10,0,176,0,11,0,recorder.wav
+11,0,288,0,12,0,zelda.wav

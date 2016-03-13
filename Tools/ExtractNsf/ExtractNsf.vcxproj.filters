@@ -1,0 +1,164 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Game_Music_Emu">
+      <UniqueIdentifier>{4e98754b-5242-4dbf-9e7b-466f68544952}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game_Music_Emu\demo">
+      <UniqueIdentifier>{3326db4c-3cae-4b0c-b0c1-623be75bef23}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Game_Music_Emu\gme">
+      <UniqueIdentifier>{fbf3c509-24f2-4f11-a6d2-a17230b4f25d}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Stdafx.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Game_Music_Emu\demo\Wave_Writer.h">
+      <Filter>Game_Music_Emu\demo</Filter>
+    </ClInclude>
+    <ClInclude Include="Game_Music_Emu\gme\blargg_common.h">
+      <Filter>Game_Music_Emu\gme</Filter>
+    </ClInclude>
+    <ClInclude Include="Game_Music_Emu\gme\blargg_config.h">
+      <Filter>Game_Music_Emu\gme</Filter>
+    </ClInclude>
+    <ClInclude Include="Game_Music_Emu\gme\blargg_endian.h">
+      <Filter>Game_Music_Emu\gme</Filter>
+    </ClInclude>
+    <ClInclude Include="Game_Music_Emu\gme\blargg_source.h">
+      <Filter>Game_Music_Emu\gme</Filter>
+    </ClInclude>
+    <ClInclude Include="Game_Music_Emu\gme\Blip_Buffer.h">
+      <Filter>Game_Music_Emu\gme</Filter>
+    </ClInclude>
+    <ClInclude Include="Game_Music_Emu\gme\Classic_Emu.h">
+      <Filter>Game_Music_Emu\gme</Filter>
+    </ClInclude>
+    <ClInclude Include="Game_Music_Emu\gme\Data_Reader.h">
+      <Filter>Game_Music_Emu\gme</Filter>
+    </ClInclude>
+    <ClInclude Include="Game_Music_Emu\gme\Gme_File.h">
+      <Filter>Game_Music_Emu\gme</Filter>
+    </ClInclude>
+    <ClInclude Include="Game_Music_Emu\gme\Music_Emu.h">
+      <Filter>Game_Music_Emu\gme</Filter>
+    </ClInclude>
+    <ClInclude Include="Game_Music_Emu\gme\Nes_Apu.h">
+      <Filter>Game_Music_Emu\gme</Filter>
+    </ClInclude>
+    <ClInclude Include="Game_Music_Emu\gme\Nes_Cpu.h">
+      <Filter>Game_Music_Emu\gme</Filter>
+    </ClInclude>
+    <ClInclude Include="Game_Music_Emu\gme\nes_cpu_io.h">
+      <Filter>Game_Music_Emu\gme</Filter>
+    </ClInclude>
+    <ClInclude Include="Game_Music_Emu\gme\Nes_Oscs.h">
+      <Filter>Game_Music_Emu\gme</Filter>
+    </ClInclude>
+    <ClInclude Include="Game_Music_Emu\gme\Nsf_Emu.h">
+      <Filter>Game_Music_Emu\gme</Filter>
+    </ClInclude>
+    <ClInclude Include="Game_Music_Emu\gme\Multi_Buffer.h">
+      <Filter>Game_Music_Emu\gme</Filter>
+    </ClInclude>
+    <ClInclude Include="Game_Music_Emu\gme\Nes_Fme7_Apu.h">
+      <Filter>Game_Music_Emu\gme</Filter>
+    </ClInclude>
+    <ClInclude Include="Game_Music_Emu\gme\Nes_Namco_Apu.h">
+      <Filter>Game_Music_Emu\gme</Filter>
+    </ClInclude>
+    <ClInclude Include="Game_Music_Emu\gme\Nes_Vrc6_Apu.h">
+      <Filter>Game_Music_Emu\gme</Filter>
+    </ClInclude>
+    <ClInclude Include="WaveWriter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="NsfEmu.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="AssemblyInfo.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Stdafx.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Game_Music_Emu\demo\Wave_Writer.cpp">
+      <Filter>Game_Music_Emu\demo</Filter>
+    </ClCompile>
+    <ClCompile Include="Game_Music_Emu\gme\Blip_Buffer.cpp">
+      <Filter>Game_Music_Emu\gme</Filter>
+    </ClCompile>
+    <ClCompile Include="Game_Music_Emu\gme\Classic_Emu.cpp">
+      <Filter>Game_Music_Emu\gme</Filter>
+    </ClCompile>
+    <ClCompile Include="Game_Music_Emu\gme\Data_Reader.cpp">
+      <Filter>Game_Music_Emu\gme</Filter>
+    </ClCompile>
+    <ClCompile Include="Game_Music_Emu\gme\Gme_File.cpp">
+      <Filter>Game_Music_Emu\gme</Filter>
+    </ClCompile>
+    <ClCompile Include="Game_Music_Emu\gme\Music_Emu.cpp">
+      <Filter>Game_Music_Emu\gme</Filter>
+    </ClCompile>
+    <ClCompile Include="Game_Music_Emu\gme\Nes_Apu.cpp">
+      <Filter>Game_Music_Emu\gme</Filter>
+    </ClCompile>
+    <ClCompile Include="Game_Music_Emu\gme\Nes_Cpu.cpp">
+      <Filter>Game_Music_Emu\gme</Filter>
+    </ClCompile>
+    <ClCompile Include="Game_Music_Emu\gme\Nes_Oscs.cpp">
+      <Filter>Game_Music_Emu\gme</Filter>
+    </ClCompile>
+    <ClCompile Include="Game_Music_Emu\gme\Nsf_Emu.cpp">
+      <Filter>Game_Music_Emu\gme</Filter>
+    </ClCompile>
+    <ClCompile Include="Game_Music_Emu\gme\Multi_Buffer.cpp">
+      <Filter>Game_Music_Emu\gme</Filter>
+    </ClCompile>
+    <ClCompile Include="Game_Music_Emu\gme\Nes_Fme7_Apu.cpp">
+      <Filter>Game_Music_Emu\gme</Filter>
+    </ClCompile>
+    <ClCompile Include="Game_Music_Emu\gme\Nes_Namco_Apu.cpp">
+      <Filter>Game_Music_Emu\gme</Filter>
+    </ClCompile>
+    <ClCompile Include="Game_Music_Emu\gme\Nes_Vrc6_Apu.cpp">
+      <Filter>Game_Music_Emu\gme</Filter>
+    </ClCompile>
+    <ClCompile Include="WaveWriter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="NsfEmu.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="ReadMe.txt" />
+    <None Include="app.ico">
+      <Filter>Resource Files</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="app.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+</Project>

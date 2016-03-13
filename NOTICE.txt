@@ -1,0 +1,8 @@
+Loz
+Copyright (c) 2016 Aldo J. Nunez
+
+
+The Game_Music_Emu library is covered by the GNU Lesser General Public License 
+version 2.1. A copy of the license is available in the library's directory.
+The GNU Lesser General Public License 2.1 is also available at
+http://www.gnu.org/licenses/old-licenses/lgpl-2.1.en.html
