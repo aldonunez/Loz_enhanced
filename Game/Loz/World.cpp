@@ -2328,7 +2328,7 @@ void World::LoadRoom( int roomId, int tileMapIndex )
         {
             UWRoomAttrs& uwRoomAttrs = (UWRoomAttrs&) roomAttrs[roomId];
 
-            if ( uwRoomAttrs.GetSecret() == Secret_None )
+            if ( uwRoomAttrs.GetSecret() != Secret_FoesItem )
                 AddUWRoomItem( roomId );
         }
     }
@@ -2355,7 +2355,7 @@ void World::AddUWRoomItem( int roomId )
         ItemObj* itemObj = new ItemObj( itemId, pos.X, pos.Y, true );
         objects[ItemSlot] = itemObj;
 
-        if ( uwRoomAttrs.GetSecret() != Secret_None )
+        if ( uwRoomAttrs.GetSecret() == Secret_FoesItem )
             Sound::PlayEffect( SEffect_room_item );
     }
 }

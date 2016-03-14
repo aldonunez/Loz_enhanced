@@ -2103,6 +2103,7 @@ namespace ExtractLoz
         const int InfoBlockDiffDrawnMapOffset = 4;
         const int InfoBlockDiffCellarRoomIdArray = 0xB;
         const int InfoBlockDiffDrawnMap = 0x16;
+        const int InfoBlockDiffShortcutPosArray = 0;
 
         private static void ExtractUnderworldInfo( Options options, int quest, int level )
         {
@@ -2210,7 +2211,10 @@ namespace ExtractLoz
                     cellarRoomIds[0] = 0x0F;
                 writer.Write( cellarRoomIds );
 
-                reader.BaseStream.Position = OWInfoBlock + blockOffset + InfoBlockShortcutPosArray;
+                if ( quest == 0 )
+                    reader.BaseStream.Position = OWInfoBlock + blockOffset + InfoBlockShortcutPosArray;
+                else
+                    reader.BaseStream.Position = quest2DiffAddr + InfoBlockDiffShortcutPosArray;
                 byte[] shortcutPos = reader.ReadBytes( InfoBlockShortcutPosCount );
                 writer.Write( shortcutPos );
 

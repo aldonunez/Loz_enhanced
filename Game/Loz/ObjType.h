@@ -40,7 +40,7 @@ enum ObjType
     Obj_Peahat,
     Obj_BlueKeese,
     Obj_RedKeese,
-    Obj_Unknown2__,
+    Obj_BlackKeese,
     Obj_Armos,
     Obj_Boulders,
     Obj_Boulder,

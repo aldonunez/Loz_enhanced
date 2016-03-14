@@ -2308,6 +2308,14 @@ FlyerSpec redKeeseSpec =
     0xC0
 };
 
+FlyerSpec blackKeeseSpec = 
+{
+    keeseAnimMap,
+    Sheet_Npcs,
+    LevelFgPalette,
+    0xC0
+};
+
 
 Keese* Keese::MakeBlueKeese( int x, int y )
 {
@@ -2317,6 +2325,11 @@ Keese* Keese::MakeBlueKeese( int x, int y )
 Keese* Keese::MakeRedKeese( int x, int y )
 {
     return new Keese( Obj_RedKeese, &redKeeseSpec, x, y, 0x7F );
+}
+
+Keese* Keese::MakeBlackKeese( int x, int y )
+{
+    return new Keese( Obj_BlackKeese, &blackKeeseSpec, x, y, 0x7F );
 }
 
 Keese::Keese( ObjType type, const FlyerSpec* spec, int x, int y, int startSpeed )
@@ -6922,6 +6935,7 @@ Object* MakeMonster( ObjType type, int x, int y )
     case Obj_LikeLike: obj = new LikeLike( x, y ); break;
     case Obj_Peahat: obj = new Peahat( x, y ); break;
     case Obj_BlueKeese: obj = Keese::MakeBlueKeese( x, y ); break;
+    case Obj_BlackKeese: obj = Keese::MakeBlackKeese( x, y ); break;
     case Obj_Armos: obj = new Armos( x, y ); break;
     case Obj_Boulders: obj = new Boulders(); break;
     case Obj_Boulder: obj = new Jumper( Obj_Boulder, &boulderSpec, x, y ); break;

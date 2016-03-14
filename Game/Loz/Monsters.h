@@ -385,6 +385,7 @@ public:
 
     static Keese* MakeBlueKeese( int x, int y );
     static Keese* MakeRedKeese( int x, int y );
+    static Keese* MakeBlackKeese( int x, int y );
 
 protected:
     virtual void UpdateFullSpeedImpl();
