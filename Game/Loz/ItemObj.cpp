@@ -1705,11 +1705,30 @@ Person::Person( ObjType type, int x, int y, const CaveSpec* spec )
         return;
     }
 
+    if ( stringId == String_MoneyOrLife && World::Get()->GotItem() )
+    {
+        World::Get()->OpenShutters();
+        World::SetPersonWallY( 0 );
+        isDeleted = true;
+        return;
+    }
+
     if ( type == Obj_Grumble && World::Get()->GotItem() )
     {
         World::SetPersonWallY( 0 );
         isDeleted = true;
         return;
+    }
+
+    if ( stringId == String_EnterLevel9 )
+    {
+        if ( World::GetItem( ItemSlot_TriforcePieces ) == 0xFF )
+        {
+            World::Get()->OpenShutters();
+            World::SetPersonWallY( 0 );
+            isDeleted = true;
+            return;
+        }
     }
 
     if ( spec->GetPickUp() && !spec->GetShowPrices() )
@@ -1755,15 +1774,9 @@ Person::Person( ObjType type, int x, int y, const CaveSpec* spec )
     {
         showNumbers = true;
     }
-    else if ( stringId == String_EnterLevel9 )
+    else if ( stringId == String_MoneyOrLife )
     {
-        if ( World::GetItem( ItemSlot_TriforcePieces ) == 0xFF )
-        {
-            World::Get()->OpenShutters();
-            World::SetPersonWallY( 0 );
-            isDeleted = true;
-            return;
-        }
+        showNumbers = true;
     }
 
     if ( state == Idle )
@@ -1958,6 +1971,44 @@ void Person::HandlePickUpSpecial( int index )
         World::PostRupeeLoss( price );
         World::GetProfile().Items[ItemSlot_MaxBombs] += 4;
         World::GetProfile().Items[ItemSlot_Bombs] = World::GetProfile().Items[ItemSlot_MaxBombs];
+
+        showNumbers = false;
+        state = PickedUp;
+        objTimer = 0x40;
+    }
+    else if ( spec.GetStringId() == String_MoneyOrLife )
+    {
+        int price = spec.Prices[index];
+        int itemId = spec.GetItemId( index );
+
+        if ( itemId == Item_Rupee )
+        {
+            if ( price > World::GetItem( ItemSlot_Rupees ) )
+                return;
+
+            World::PostRupeeLoss( price );
+        }
+        else if ( itemId == Item_HeartContainer )
+        {
+            if ( price > World::GetItem( ItemSlot_HeartContainers ) )
+                return;
+
+            Profile& profile = World::GetProfile();
+            if ( profile.Items[ItemSlot_HeartContainers] > 1 )
+            {
+                profile.Items[ItemSlot_HeartContainers]--;
+                if ( profile.Hearts > 0x100 )
+                    profile.Hearts -= 0x100;
+                Sound::PlayEffect( SEffect_key_heart );
+            }
+        }
+        else
+        {
+            return;
+        }
+
+        World::Get()->MarkItem();
+        World::Get()->OpenShutters();
 
         showNumbers = false;
         state = PickedUp;

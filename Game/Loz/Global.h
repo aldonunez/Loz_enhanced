@@ -125,6 +125,7 @@ enum
     String_LostWoodsHint    = 12,
     String_Grumble          = 18,
     String_MoreBombs        = 25,
+    String_MoneyOrLife      = 27,
     String_EnterLevel9      = 34,
 };
 

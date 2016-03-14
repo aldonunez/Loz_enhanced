@@ -3544,10 +3544,26 @@ void World::MakeUnderworldPerson( int objId )
     cave.Items[1] = Item_None;
     cave.Items[2] = Item_None;
 
+    UWRoomAttrs& uwRoomAttrs = (UWRoomAttrs&) roomAttrs[curRoomId];
+    Secret secret = (Secret) uwRoomAttrs.GetSecret();
+
     if ( objId == Obj_Grumble )
     {
         cave.StringId = String_Grumble;
         cave.DwellerType = Obj_FriendlyMoblin;
+    }
+    else if ( secret == Secret_MoneyOrLife )
+    {
+        cave.StringId = String_MoneyOrLife;
+        cave.DwellerType = Obj_OldMan;
+        cave.Items[0] = Item_HeartContainer;
+        cave.Prices[0] = 1;
+        cave.Items[2] = Item_Rupee;
+        cave.Prices[2] = 50;
+        cave.SetShowNegative();
+        cave.SetShowItems();
+        cave.SetSpecial();
+        cave.SetPickUp();
     }
     else
     {
@@ -3572,8 +3588,6 @@ void World::MakeUnderworldPerson( int objId )
             cave.SetPickUp();
         }
     }
-
-    // TODO: money or life
 
     MakePersonRoomObjects( objId, &cave );
 }
