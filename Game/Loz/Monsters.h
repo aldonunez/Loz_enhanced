@@ -1106,6 +1106,9 @@ public:
 protected:
     virtual void UpdateFullSpeedImpl();
     virtual int GetFrame();
+
+private:
+    bool TouchesObject( Object* obj );
 };
 
 

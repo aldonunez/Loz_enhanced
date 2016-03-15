@@ -2328,7 +2328,8 @@ void World::LoadRoom( int roomId, int tileMapIndex )
         {
             UWRoomAttrs& uwRoomAttrs = (UWRoomAttrs&) roomAttrs[roomId];
 
-            if ( uwRoomAttrs.GetSecret() != Secret_FoesItem )
+            if (   uwRoomAttrs.GetSecret() != Secret_FoesItem
+                && uwRoomAttrs.GetSecret() != Secret_LastBoss )
                 AddUWRoomItem( roomId );
         }
     }
@@ -2355,7 +2356,8 @@ void World::AddUWRoomItem( int roomId )
         ItemObj* itemObj = new ItemObj( itemId, pos.X, pos.Y, true );
         objects[ItemSlot] = itemObj;
 
-        if ( uwRoomAttrs.GetSecret() == Secret_FoesItem )
+        if (   uwRoomAttrs.GetSecret() == Secret_FoesItem
+            || uwRoomAttrs.GetSecret() == Secret_LastBoss )
             Sound::PlayEffect( SEffect_room_item );
     }
 }
@@ -3570,7 +3572,7 @@ void World::MakeUnderworldPerson( int objId )
         const LevelPersonStrings* stringIdTables = (LevelPersonStrings*) 
             extraData.GetItem( Extra_LevelPersonStringIds );
 
-        int levelIndex      = infoBlock.LevelNumber - 1;
+        int levelIndex      = infoBlock.EffectiveLevelNumber - 1;
         int levelTableIndex = levelGroups[levelIndex];
         int stringSlot      = objId - Obj_Person1;
         int stringId        = stringIdTables->StringIds[levelTableIndex][stringSlot];
@@ -4757,8 +4759,10 @@ void World::UpdateWinGame()
                 profile.Deaths = deaths;
                 profile.Quest = 1;
                 profile.Items[ItemSlot_HeartContainers] = DefaultHearts;
+                profile.Items[ItemSlot_MaxBombs] = DefaultBombs;
                 SaveFolder::WriteProfile( profileSlot, profile );
 
+                Sound::StopAll();
                 GotoFileMenu();
             }
         }

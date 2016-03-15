@@ -195,6 +195,7 @@ public:
         uint8_t     BossRoomId;
         uint8_t     Song;
         uint8_t     LevelNumber;
+        uint8_t     EffectiveLevelNumber;
         uint8_t     DrawnMapOffset;
         uint8_t     CellarRoomIds[LevelCellarCount];
         uint8_t     ShortcutPosition[LevelShortcutCount];

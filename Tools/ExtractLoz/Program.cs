@@ -2195,6 +2195,8 @@ namespace ExtractLoz
                     writer.Write( (byte) level );
                 }
 
+                writer.Write( (byte) effectiveLevel );
+
                 if ( quest == 0 )
                     reader.BaseStream.Position = OWInfoBlock + blockOffset + InfoBlockDrawnMapOffset;
                 else

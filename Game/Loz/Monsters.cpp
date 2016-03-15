@@ -6673,12 +6673,21 @@ void Fairy::Update()
 
     UpdateStateAndMove();
 
-    Player* player = World::GetPlayer();
-    int distanceX = abs( player->GetX() - (int) GetX() );
-    int distanceY = abs( player->GetY() - (int) GetY() );
+    static const int objSlots[] = { PlayerSlot, BoomerangSlot };
+    bool touchedItem = false;
 
-    if (   distanceX <= 8
-        && distanceY <= 8 )
+    for ( int i = 0; i < _countof( objSlots ); i++ )
+    {
+        int slot = objSlots[i];
+        Object* obj = World::GetObject( slot );
+        if ( obj != nullptr && !obj->IsDeleted() && TouchesObject( obj ) )
+        {
+            touchedItem = true;
+            break;
+        }
+    }
+
+    if ( touchedItem )
     {
         World::AddItem( Item_Fairy );
         isDeleted = true;
@@ -6693,6 +6702,15 @@ void Fairy::UpdateFullSpeedImpl()
 int Fairy::GetFrame()
 {
     return (moveCounter & 4) >> 2;
+}
+
+bool Fairy::TouchesObject( Object* obj )
+{
+    int distanceX = abs( obj->GetX() - objX );
+    int distanceY = abs( obj->GetY() - objY );
+
+    return distanceX <= 8
+        && distanceY <= 8;
 }
 
 
