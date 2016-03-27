@@ -13,6 +13,10 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Shaders">
+      <UniqueIdentifier>{83872751-1d47-4a31-b904-98a6b4581c98}</UniqueIdentifier>
+      <Extensions>glsl;hlsl</Extensions>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Loz.cpp">
@@ -175,10 +179,18 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="tileShaderPixel.glsl" />
-    <None Include="tileShaderVertex.glsl" />
-    <None Include="tileShaderPixel.hlsl" />
-    <None Include="tileShaderVertex.hlsl" />
+    <None Include="tileShaderPixel.glsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="tileShaderVertex.hlsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="tileShaderPixel.hlsl">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="tileShaderVertex.glsl">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Loz.rc">
