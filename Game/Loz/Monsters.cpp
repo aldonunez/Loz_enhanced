@@ -6097,8 +6097,8 @@ void GleeokNeck::CrossedBothMidLimits( int index )
 //  Ganon
 //----------------------------------------------------------------------------
 
-static const int    ganonNormalPalette[]    = { 0xFFF83800, 0xFF00E8D8, 0xFF00FCFC };
-static const int    ganonRedPalette[]       = { 0xFF881400, 0xFFE45C10, 0xFFFCFCFC };
+static const uint8_t    ganonNormalPalette[]    = { 0x16, 0x2C, 0x3C };
+static const uint8_t    ganonRedPalette[]       = { 0x07, 0x17, 0x30 };
 
 
 Ganon::Ganon( int x, int y )
@@ -6423,11 +6423,11 @@ void Ganon::MovePieces()
     }
 }
 
-void Ganon::SetBossPalette( const int* palette )
+void Ganon::SetBossPalette( const uint8_t* palette )
 {
-    Graphics::SetColor( SeaPal, 1, palette[0] );
-    Graphics::SetColor( SeaPal, 2, palette[1] );
-    Graphics::SetColor( SeaPal, 3, palette[2] );
+    Graphics::SetColorIndexed( SeaPal, 1, palette[0] );
+    Graphics::SetColorIndexed( SeaPal, 2, palette[1] );
+    Graphics::SetColorIndexed( SeaPal, 3, palette[2] );
     Graphics::UpdatePalettes();
 }
 

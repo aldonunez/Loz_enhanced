@@ -1923,19 +1923,12 @@ namespace ExtractLoz
                 var colorIndex = paletteBytes[i];
                 if ( colorIndex >= DefaultSystemPalette.Colors.Length )
                     colorIndex = 0;
-                var color = DefaultSystemPalette.Colors[colorIndex];
                 // ARGB 8888
                 // Index 0 is opaque for BG palettes, and transparent for sprites.
                 // The first 4 palettes are for BG; the second 4 are for sprites.
-                writer.Write( (byte) ((color & 0x000000FF)) );
-                writer.Write( (byte) ((color & 0x0000FF00) >> 8) );
-                writer.Write( (byte) ((color & 0x00FF0000) >> 16) );
+                writer.Write( colorIndex );
                 // Alpha for BG palettes has to be 0 at color index 0, too, because sprites 
                 // can go behind the background.
-                if ( (i % 4) == 0 )
-                    writer.Write( (byte) 0 );
-                else
-                    writer.Write( (byte) 0xFF );
             }
         }
 
@@ -1959,19 +1952,12 @@ namespace ExtractLoz
                 for ( int i = 0; i < PaletteByteCount; i++ )
                 {
                     var colorIndex = paletteBytes[i];
-                    var color = DefaultSystemPalette.Colors[colorIndex];
                     // ARGB 8888
                     // Index 0 is opaque for BG palettes, and transparent for sprites.
                     // The first 4 palettes are for BG; the second 4 are for sprites.
-                    writer.Write( (byte) ((color & 0x000000FF)) );
-                    writer.Write( (byte) ((color & 0x0000FF00) >> 8) );
-                    writer.Write( (byte) ((color & 0x00FF0000) >> 16) );
+                    writer.Write( colorIndex );
                     // Alpha for BG palettes has to be 0 at color index 0, too, because sprites 
                     // can go behind the background.
-                    if ( (i % 4) == 0 )
-                        writer.Write( (byte) 0 );
-                    else
-                        writer.Write( (byte) 0xFF );
                 }
 
                 reader.BaseStream.Position = OWInfoBlock + InfoBlockStartY;
@@ -2141,19 +2127,12 @@ namespace ExtractLoz
                 for ( int i = 0; i < PaletteByteCount; i++ )
                 {
                     var colorIndex = paletteBytes[i];
-                    var color = DefaultSystemPalette.Colors[colorIndex];
                     // ARGB 8888
                     // Index 0 is opaque for BG palettes, and transparent for sprites.
                     // The first 4 palettes are for BG; the second 4 are for sprites.
-                    writer.Write( (byte) ((color & 0x000000FF)) );
-                    writer.Write( (byte) ((color & 0x0000FF00) >> 8) );
-                    writer.Write( (byte) ((color & 0x00FF0000) >> 16) );
+                    writer.Write( colorIndex );
                     // Alpha for BG palettes has to be 0 at color index 0, too, because sprites 
                     // can go behind the background.
-                    if ( (i % 4) == 0 )
-                        writer.Write( (byte) 0 );
-                    else
-                        writer.Write( (byte) 0xFF );
                 }
 
                 reader.BaseStream.Position = OWInfoBlock + blockOffset + InfoBlockStartY;
@@ -2406,14 +2385,7 @@ namespace ExtractLoz
             var colorIndexes = reader.ReadBytes( 12 );
 
             writer.Write( colorIndexes.Length );
-
-            for ( int i = 0; i < colorIndexes.Length; i++ )
-            {
-                var colorIndex = colorIndexes[i];
-                var color = DefaultSystemPalette.Colors[colorIndex];
-                // The high byte for alpha is at max by default.
-                writer.Write( color );
-            }
+            writer.Write( colorIndexes );
         }
 
         private static void ReadTranslateSpawnSpots( BinaryReader reader, BinaryWriter writer )

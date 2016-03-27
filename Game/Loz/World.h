@@ -188,7 +188,7 @@ public:
         static const int FadePals = 2;
         static const int MapLength = 16;
 
-        uint32_t    Palettes[LevelPaletteCount][PaletteLength];
+        uint8_t     Palettes[LevelPaletteCount][PaletteLength];
         uint8_t     StartY;
         uint8_t     StartRoomId;
         uint8_t     TriforceRoomId;
@@ -200,9 +200,10 @@ public:
         uint8_t     CellarRoomIds[LevelCellarCount];
         uint8_t     ShortcutPosition[LevelShortcutCount];
         uint8_t     DrawnMap[MapLength];
-        uint32_t    OutOfCellarPaletteSeq[FadeLength][FadePals][PaletteLength];
-        uint32_t    InCellarPaletteSeq[FadeLength][FadePals][PaletteLength];
-        uint32_t    DarkPaletteSeq[FadeLength][FadePals][PaletteLength];
+        uint8_t     Padding[2];
+        uint8_t     OutOfCellarPaletteSeq[FadeLength][FadePals][PaletteLength];
+        uint8_t     InCellarPaletteSeq[FadeLength][FadePals][PaletteLength];
+        uint8_t     DarkPaletteSeq[FadeLength][FadePals][PaletteLength];
         uint8_t     DeathPaletteSeq[FadeLength][FadePals][PaletteLength];
     };
 

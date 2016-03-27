@@ -1038,7 +1038,7 @@ private:
     void MakePieces();
     void MovePieces();
 
-    void SetBossPalette( const int* palette );
+    void SetBossPalette( const uint8_t* palette );
     void ResetPosition();
 };
 

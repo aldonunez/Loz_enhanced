@@ -102,8 +102,8 @@ enum
 
 struct ColorSeq
 {
-    int Length;
-    int Colors[1];
+    int     Length;
+    uint8_t Colors[1];
 };
 
 struct SpotSeq
@@ -116,7 +116,7 @@ struct PaletteSet
 {
     int     Length;
     int     Start;
-    int     Palettes[1][PaletteLength];
+    uint8_t Palettes[1][PaletteLength];
 };
 
 struct CaveSpecList
@@ -563,16 +563,16 @@ void ClearRoomItemData()
 
 static void SetPlayerColor()
 {
-    static const int colors[] = 
+    static const uint8_t sysColors[] = 
     {
-        0xFFB8F818,
-        0xFFB8B8F8,
-        0xFFF83800
+        0x29,
+        0x32,
+        0x16
     };
 
     int value = profile.Items[ItemSlot_Ring];
 
-    Graphics::SetColor( PlayerPalette, 1, colors[value] );
+    Graphics::SetColorIndexed( PlayerPalette, 1, sysColors[value] );
 }
 
 static void SetFlashPalette()
@@ -609,7 +609,7 @@ static void SetLevelPalette()
 
     for ( int i = 2; i < BackgroundPalCount; i++ )
     {
-        Graphics::SetPalette( i, (int*) infoBlock->Palettes[i] );
+        Graphics::SetPaletteIndexed( i, infoBlock->Palettes[i] );
     }
 
     Graphics::UpdatePalettes();
@@ -618,7 +618,7 @@ static void SetLevelPalette()
 static void SetLevelFgPalette()
 {
     const World::LevelInfoBlock* infoBlock = World::Get()->GetLevelInfo();
-    Graphics::SetPalette( LevelFgPalette, (int*) infoBlock->Palettes[LevelFgPalette] );
+    Graphics::SetPaletteIndexed( LevelFgPalette, infoBlock->Palettes[LevelFgPalette] );
 }
 
 
@@ -2176,7 +2176,7 @@ void World::FadeInImpl()
 
         for ( int i = 0; i < 2; i++ )
         {
-            Graphics::SetPalette( i + 2, (int*) infoBlock.DarkPaletteSeq[darkRoomFadeStep][i] );
+            Graphics::SetPaletteIndexed( i + 2, infoBlock.DarkPaletteSeq[darkRoomFadeStep][i] );
         }
         Graphics::UpdatePalettes();
     }
@@ -2902,9 +2902,9 @@ void World::UpdateRoomColors()
                 state.play.allowWalkOnWater = true;
             }
 
-            int color = colorSeq->Colors[curColorSeqNum];
+            int colorIndex = colorSeq->Colors[curColorSeqNum];
             curColorSeqNum++;
-            Graphics::SetColor( 3, 3, color );
+            Graphics::SetColorIndexed( 3, 3, colorIndex );
             Graphics::UpdatePalettes();
         }
     }
@@ -3912,7 +3912,7 @@ void World::UpdateScroll()
 
             const ColorSeq* colorSeq = (ColorSeq*) extraData.GetItem( Extra_PondColors );
             int color = colorSeq->Colors[curColorSeqNum];
-            Graphics::SetColor( 3, 3, color );
+            Graphics::SetColorIndexed( 3, 3, color );
             Graphics::UpdatePalettes();
 
             if ( curColorSeqNum == 0 )
@@ -3925,7 +3925,7 @@ void World::UpdateScroll()
         {
             for ( int i = 0; i < 2; i++ )
             {
-                Graphics::SetPalette( i + 2, (int*) infoBlock.DarkPaletteSeq[darkRoomFadeStep][i] );
+                Graphics::SetPaletteIndexed( i + 2, infoBlock.DarkPaletteSeq[darkRoomFadeStep][i] );
             }
             Graphics::UpdatePalettes();
 
@@ -4222,7 +4222,7 @@ void World::UpdateEnter()
 
                 for ( int i = 0; i < 2; i++ )
                 {
-                    Graphics::SetPalette( i + 2, (int*) infoBlock.DarkPaletteSeq[darkRoomFadeStep][i] );
+                    Graphics::SetPaletteIndexed( i + 2, infoBlock.DarkPaletteSeq[darkRoomFadeStep][i] );
                 }
                 Graphics::UpdatePalettes();
             }
@@ -4396,7 +4396,7 @@ void World::UpdateUnfurl()
 
         for ( int i = 0; i < LevelInfoBlock::LevelPaletteCount; i++ )
         {
-            Graphics::SetPalette( i, (int*) infoBlock.Palettes[i] );
+            Graphics::SetPaletteIndexed( i, infoBlock.Palettes[i] );
         }
 
         SetPlayerColor();
@@ -4928,7 +4928,7 @@ void World::UpdatePlayCellar()
             for ( int i = 0; i < LevelInfoBlock::FadePals; i++ )
             {
                 int step = state.playCellar.fadeStep;
-                Graphics::SetPalette( i + 2, (int*) infoBlock.OutOfCellarPaletteSeq[step][i] );
+                Graphics::SetPaletteIndexed( i + 2, infoBlock.OutOfCellarPaletteSeq[step][i] );
             }
             Graphics::UpdatePalettes();
             state.playCellar.fadeTimer = 9;
@@ -4974,7 +4974,7 @@ void World::UpdatePlayCellar()
             for ( int i = 0; i < LevelInfoBlock::FadePals; i++ )
             {
                 int step = state.playCellar.fadeStep;
-                Graphics::SetPalette( i + 2, (int*) infoBlock.InCellarPaletteSeq[step][i] );
+                Graphics::SetPaletteIndexed( i + 2, infoBlock.InCellarPaletteSeq[step][i] );
             }
             Graphics::UpdatePalettes();
             state.playCellar.fadeTimer = 9;
@@ -5043,7 +5043,7 @@ void World::UpdateLeaveCellar()
             for ( int i = 0; i < LevelInfoBlock::FadePals; i++ )
             {
                 int step = state.leaveCellar.fadeStep;
-                Graphics::SetPalette( i + 2, (int*) infoBlock.InCellarPaletteSeq[step][i] );
+                Graphics::SetPaletteIndexed( i + 2, infoBlock.InCellarPaletteSeq[step][i] );
             }
             Graphics::UpdatePalettes();
             state.leaveCellar.fadeTimer = 9;
@@ -5084,7 +5084,7 @@ void World::UpdateLeaveCellar()
             for ( int i = 0; i < LevelInfoBlock::FadePals; i++ )
             {
                 int step = state.leaveCellar.fadeStep;
-                Graphics::SetPalette( i + 2, (int*) infoBlock.OutOfCellarPaletteSeq[step][i] );
+                Graphics::SetPaletteIndexed( i + 2, infoBlock.OutOfCellarPaletteSeq[step][i] );
             }
             Graphics::UpdatePalettes();
             state.leaveCellar.fadeTimer = 9;
@@ -5117,7 +5117,7 @@ void World::UpdateLeaveCellar()
     {
         for ( int i = 0; i < 2; i++ )
         {
-            Graphics::SetPalette( i + 2, (int*) infoBlock.Palettes[i + 2] );
+            Graphics::SetPaletteIndexed( i + 2, infoBlock.Palettes[i + 2] );
         }
         Graphics::UpdatePalettes();
 
@@ -5186,7 +5186,7 @@ void World::UpdatePlayCave()
 
         for ( int i = 0; i < 2; i++ )
         {
-            Graphics::SetPalette( i + 2, paletteSet->Palettes[i] );
+            Graphics::SetPaletteIndexed( i + 2, paletteSet->Palettes[i] );
         }
         Graphics::UpdatePalettes();
     }
