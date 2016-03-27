@@ -2620,13 +2620,13 @@ void World::UpdatePlay()
 
         if ( pause == 0 )
         {
-            if ( Input::IsKeyPressing( SelectKey ) )
+            if ( Input::IsButtonPressing( InputButtons::Select ) )
             {
                 pause = 1;
                 Sound::Pause();
                 return;
             }
-            else if ( Input::IsKeyPressing( MenuKey ) )
+            else if ( Input::IsButtonPressing( InputButtons::Start ) )
             {
                 submenu = 1;
                 return;
@@ -2634,7 +2634,7 @@ void World::UpdatePlay()
         }
         else if ( pause == 1 )
         {
-            if ( Input::IsKeyPressing( SelectKey ) )
+            if ( Input::IsButtonPressing( InputButtons::Select ) )
             {
                 pause = 0;
                 Sound::Unpause();
@@ -2713,18 +2713,6 @@ void World::UpdatePlay()
         {
             profile.Items[ItemSlot_RupeesToSubtract] += 0x20;
         }
-        else if ( Input::IsKeyPressing( ALLEGRO_KEY_Q ) )
-        {
-            profile.SelectedItem--;
-            if ( profile.SelectedItem == 0 )
-                profile.SelectedItem = ItemSlot_MaxItems - 1;
-        }
-        else if ( Input::IsKeyPressing( ALLEGRO_KEY_W ) )
-        {
-            profile.SelectedItem++;
-            if ( profile.SelectedItem == ItemSlot_MaxItems )
-                profile.SelectedItem = 1;
-        }
 #endif
     }
 }
@@ -2748,7 +2736,7 @@ void World::UpdateSubmenu()
     }
     else if ( submenu == 8 )
     {
-        if ( Input::IsKeyPressing( MenuKey ) )
+        if ( Input::IsButtonPressing( InputButtons::Start ) )
         {
             menu.Deactivate();
             submenu++;
@@ -4738,7 +4726,7 @@ void World::UpdateWinGame()
         credits->Update();
         if ( credits->IsDone() )
         {
-            if ( Input::IsKeyPressing( MenuKey ) )
+            if ( Input::IsButtonPressing( InputButtons::Start ) )
             {
                 delete credits;
                 credits = nullptr;
@@ -5425,13 +5413,13 @@ void World::UpdateContinueQuestion()
     }
     else if ( state.continueQuestion.substate == ContinueState::Idle )
     {
-        if ( Input::IsKeyPressing( SelectKey ) )
+        if ( Input::IsButtonPressing( InputButtons::Select ) )
         {
             state.continueQuestion.selectedIndex++;
             if ( state.continueQuestion.selectedIndex == 3 )
                 state.continueQuestion.selectedIndex = 0;
         }
-        else if ( Input::IsKeyPressing( MenuKey ) )
+        else if ( Input::IsButtonPressing( InputButtons::Start ) )
         {
             state.continueQuestion.substate = ContinueState::Chosen;
             state.continueQuestion.timer = 0x40;

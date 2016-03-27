@@ -283,9 +283,9 @@ void Submenu::Update()
 
     int dir = 0;
 
-    if ( Input::IsKeyPressing( ALLEGRO_KEY_LEFT ) )
+    if ( Input::IsButtonPressing( InputButtons::Left ) )
         dir = -1;
-    else if ( Input::IsKeyPressing( ALLEGRO_KEY_RIGHT ) )
+    else if ( Input::IsButtonPressing( InputButtons::Right ) )
         dir = 1;
     else
         return;

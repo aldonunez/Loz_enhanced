@@ -199,13 +199,13 @@ void RegisterMenu::CommitFiles()
 
 void RegisterMenu::Update()
 {
-    if ( Input::IsKeyPressing( SelectKey ) )
+    if ( Input::IsButtonPressing( InputButtons::Select ) )
     {
         SelectNext();
         namePos = 0;
         Sound::PlayEffect( SEffect_cursor );
     }
-    else if ( Input::IsKeyPressing( MenuKey ) )
+    else if ( Input::IsButtonPressing( InputButtons::Start ) )
     {
         if ( selectedIndex == 3 )
         {
@@ -213,7 +213,7 @@ void RegisterMenu::Update()
             World::ChooseFile( summaries );
         }
     }
-    else if ( Input::IsKeyPressing( WeaponKey ) )
+    else if ( Input::IsButtonPressing( InputButtons::A ) )
     {
         if ( selectedIndex < 3 )
         {
@@ -221,27 +221,27 @@ void RegisterMenu::Update()
             Sound::PlayEffect( SEffect_put_bomb );
         }
     }
-    else if ( Input::IsKeyPressing( ItemKey ) )
+    else if ( Input::IsButtonPressing( InputButtons::B ) )
     {
         if ( selectedIndex < 3 )
             MoveNextNamePosition();
     }
-    else if ( Input::IsKeyPressing( ALLEGRO_KEY_RIGHT ) )
+    else if ( Input::IsButtonPressing( InputButtons::Right ) )
     {
         MoveCharSetCursorH( 1 );
         Sound::PlayEffect( SEffect_cursor );
     }
-    else if ( Input::IsKeyPressing( ALLEGRO_KEY_LEFT ) )
+    else if ( Input::IsButtonPressing( InputButtons::Left ) )
     {
         MoveCharSetCursorH( -1 );
         Sound::PlayEffect( SEffect_cursor );
     }
-    else if ( Input::IsKeyPressing( ALLEGRO_KEY_DOWN ) )
+    else if ( Input::IsButtonPressing( InputButtons::Down ) )
     {
         MoveCharSetCursorV( 1 );
         Sound::PlayEffect( SEffect_cursor );
     }
-    else if ( Input::IsKeyPressing( ALLEGRO_KEY_UP ) )
+    else if ( Input::IsButtonPressing( InputButtons::Up ) )
     {
         MoveCharSetCursorV( -1 );
         Sound::PlayEffect( SEffect_cursor );

@@ -8,25 +8,18 @@
 #pragma once
 
 
-const int ConfirmKey = ALLEGRO_KEY_F;
-const int SelectKey = ALLEGRO_KEY_S;
-const int MenuKey = ALLEGRO_KEY_ENTER;
-const int ItemKey = ALLEGRO_KEY_D;
-const int WeaponKey = ALLEGRO_KEY_F;
-
-
-enum KeyState
+enum ButtonState
 {
-    KeyState_Lifted     = 0,
-    KeyState_Pressing   = 1,
-    KeyState_Releasing  = 2,
-    KeyState_Held       = 3,
+    ButtonState_Lifted     = 0,
+    ButtonState_Pressing   = 1,
+    ButtonState_Releasing  = 2,
+    ButtonState_Held       = 3,
 };
 
 
 struct InputButtons
 {
-    enum Value
+    enum Button
     {
         None    = 0,
         A       = 0x80,
@@ -55,8 +48,11 @@ public:
 
     static bool IsKeyDown( int keyCode );
     static bool IsKeyPressing( int keyCode );
+    static ButtonState GetKey( int keyCode );
 
-    static KeyState GetKey( int keyCode );
+    static bool IsButtonDown( int buttonCode );
+    static bool IsButtonPressing( int buttonCode );
+    static ButtonState GetButton( int buttonCode );
     static Direction GetInputDirection();
 
     static void Update();

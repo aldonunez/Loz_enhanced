@@ -57,12 +57,12 @@ void EliminateMenu::DeleteCurrentProfile()
 
 void EliminateMenu::Update()
 {
-    if ( Input::IsKeyPressing( SelectKey ) )
+    if ( Input::IsButtonPressing( InputButtons::Select ) )
     {
         SelectNext();
         Sound::PlayEffect( SEffect_cursor );
     }
-    else if ( Input::IsKeyPressing( MenuKey ) )
+    else if ( Input::IsButtonPressing( InputButtons::Start ) )
     {
         if ( selectedIndex < 3 )
             DeleteCurrentProfile();

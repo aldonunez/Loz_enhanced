@@ -9,6 +9,27 @@
 #include "Input.h"
 
 
+struct ButtonMapping
+{
+    uint8_t SrcCode;
+    uint8_t DstCode;
+};
+
+static ButtonMapping keyboardMappings[8] = 
+{
+    { ALLEGRO_KEY_RIGHT,    InputButtons::Right },
+    { ALLEGRO_KEY_LEFT,     InputButtons::Left },
+    { ALLEGRO_KEY_DOWN,     InputButtons::Down },
+    { ALLEGRO_KEY_UP,       InputButtons::Up },
+    { ALLEGRO_KEY_ENTER,    InputButtons::Start },
+    { ALLEGRO_KEY_S,        InputButtons::Select },
+    { ALLEGRO_KEY_D,        InputButtons::B },
+    { ALLEGRO_KEY_F,        InputButtons::A },
+};
+
+static InputButtons oldInputState( 0 );
+static InputButtons inputState( 0 );
+
 static ALLEGRO_KEYBOARD_STATE oldKeyboardState;
 static ALLEGRO_KEYBOARD_STATE keyboardState;
 
@@ -33,35 +54,13 @@ void InputButtons::Clear( uint value )
     Buttons = Buttons ^ value;
 }
 
-// TODO: calculate this once a frame
-
 InputButtons Input::GetButtons()
 {
     uint buttons = 0;
 
-    if ( IsKeyPressing( WeaponKey ) )
-        buttons |= InputButtons::A;
-
-    if ( IsKeyPressing( ItemKey ) )
-        buttons |= InputButtons::B;
-
-    if ( IsKeyPressing( SelectKey ) )
-        buttons |= InputButtons::Select;
-
-    if ( IsKeyPressing( MenuKey ) )
-        buttons |= InputButtons::Start;
-
-    if ( IsKeyDown( ALLEGRO_KEY_UP ) )
-        buttons |= InputButtons::Up;
-
-    if ( IsKeyDown( ALLEGRO_KEY_DOWN ) )
-        buttons |= InputButtons::Down;
-
-    if ( IsKeyDown( ALLEGRO_KEY_LEFT ) )
-        buttons |= InputButtons::Left;
-
-    if ( IsKeyDown( ALLEGRO_KEY_RIGHT ) )
-        buttons |= InputButtons::Right;
+    buttons = (oldInputState.Buttons ^ inputState.Buttons) 
+        & inputState.Buttons 
+        | (inputState.Buttons & 0xF);
 
     return (InputButtons) buttons;
 }
@@ -73,32 +72,50 @@ bool Input::IsKeyDown( int keyCode )
 
 bool Input::IsKeyPressing( int keyCode )
 {
-    return GetKey( keyCode ) == KeyState_Pressing;
+    return GetKey( keyCode ) == ButtonState_Pressing;
 }
 
-KeyState Input::GetKey( int keyCode )
+ButtonState Input::GetKey( int keyCode )
 {
     int isDown = al_key_down( &keyboardState, keyCode ) ? 1 : 0;
     int wasDown = al_key_down( &oldKeyboardState, keyCode ) ? 1 : 0;
 
-    return (KeyState) ((wasDown << 1) | isDown);
+    return (ButtonState) ((wasDown << 1) | isDown);
+}
+
+bool Input::IsButtonDown( int buttonCode )
+{
+    return inputState.Buttons & buttonCode;
+}
+
+bool Input::IsButtonPressing( int buttonCode )
+{
+    return GetButton( buttonCode ) == ButtonState_Pressing;
+}
+
+ButtonState Input::GetButton( int buttonCode )
+{
+    int isDown = (inputState.Buttons & buttonCode) ? 1 : 0;
+    int wasDown = (oldInputState.Buttons & buttonCode) ? 1 : 0;
+
+    return (ButtonState) ((wasDown << 1) | isDown);
 }
 
 Direction Input::GetInputDirection()
 {
-    if ( IsKeyDown( ALLEGRO_KEY_LEFT ) )
+    if ( IsButtonDown( InputButtons::Left ) )
     {
         return Dir_Left;
     }
-    else if ( IsKeyDown( ALLEGRO_KEY_RIGHT ) )
+    else if ( IsButtonDown( InputButtons::Right ) )
     {
         return Dir_Right;
     }
-    else if ( IsKeyDown( ALLEGRO_KEY_UP ) )
+    else if ( IsButtonDown( InputButtons::Up ) )
     {
         return Dir_Up;
     }
-    else if ( IsKeyDown( ALLEGRO_KEY_DOWN ) )
+    else if ( IsButtonDown( InputButtons::Down ) )
     {
         return Dir_Down;
     }
@@ -106,10 +123,28 @@ Direction Input::GetInputDirection()
     return Dir_None;
 }
 
-static void Poll()
+static void PollKeyboard()
 {
     memcpy( &oldKeyboardState, &keyboardState, sizeof keyboardState );
     al_get_keyboard_state( &keyboardState );
+
+    for ( int i = 0; i < _countof( keyboardMappings ); i++ )
+    {
+        ButtonMapping& mapping = keyboardMappings[i];
+        if ( mapping.DstCode == InputButtons::None )
+            continue;
+
+        if ( al_key_down( &keyboardState, mapping.SrcCode ) )
+            inputState.Buttons |= mapping.DstCode;
+    }
+}
+
+static void Poll()
+{
+    oldInputState = inputState;
+    inputState = 0;
+
+    PollKeyboard();
 }
 
 void Input::Update()
