@@ -601,6 +601,18 @@ void Bomb::Update()
         {
             isDeleted = true;
             objTimer = 0;
+            return;
+        }
+    }
+
+    if ( state == Blasting )
+    {
+        switch ( objTimer )
+        {
+        case 0x16: Graphics::EnableGrayscale(); break;
+        case 0x12: Graphics::DisableGrayscale(); break;
+        case 0x11: Graphics::EnableGrayscale(); break;
+        case 0x0D: Graphics::DisableGrayscale(); break;
         }
     }
 }
@@ -614,7 +626,6 @@ void Bomb::Draw()
     }
     else
     {
-        // TODO: flash
         Point* positions = cloudPositions[objTimer % CloudFrames];
 
         for ( int i = 0; i < Clouds; i++ )

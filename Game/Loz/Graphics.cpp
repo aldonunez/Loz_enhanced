@@ -22,6 +22,9 @@ unsigned char*  paletteBuf;
 int             paletteBufSize;
 int             paletteStride;
 int             systemPalette[SysPaletteLength];
+int             grayscalePalette[SysPaletteLength];
+int*            activeSystemPalette = systemPalette;
+uint8_t         palettes[PaletteCount][PaletteLength];
 
 float           viewScale;
 float           viewOffsetX;
@@ -156,11 +159,16 @@ const SpriteAnim* Graphics::GetAnimation( int slot, int animIndex )
 void Graphics::LoadSystemPalette( const int* colorsArgb8 )
 {
     memcpy( systemPalette, colorsArgb8, sizeof systemPalette );
+
+    for ( int i = 0; i < SysPaletteLength; i++ )
+    {
+        grayscalePalette[i] = systemPalette[i & 0x30];
+    }
 }
 
 ALLEGRO_COLOR Graphics::GetSystemColor( int sysColor )
 {
-    int argb8 = systemPalette[sysColor];
+    int argb8 = activeSystemPalette[sysColor];
     return al_map_rgba( 
         (argb8 >> 16) & 0xFF,
         (argb8 >>  8) & 0xFF,
@@ -194,8 +202,9 @@ void Graphics::SetColorIndexed( int paletteIndex, int colorIndex, int sysColor )
 {
     int colorArgb8 = 0;
     if ( colorIndex != 0 )
-        colorArgb8 = systemPalette[sysColor];
+        colorArgb8 = activeSystemPalette[sysColor];
     SetColor( paletteIndex, colorIndex, colorArgb8 );
+    palettes[paletteIndex][colorIndex] = sysColor;
 }
 
 void Graphics::SetPaletteIndexed( int paletteIndex, const uint8_t* sysColors )
@@ -203,11 +212,12 @@ void Graphics::SetPaletteIndexed( int paletteIndex, const uint8_t* sysColors )
     int colorsArgb8[4] = 
     {
         0,
-        systemPalette[sysColors[1]],
-        systemPalette[sysColors[2]],
-        systemPalette[sysColors[3]],
+        activeSystemPalette[sysColors[1]],
+        activeSystemPalette[sysColors[2]],
+        activeSystemPalette[sysColors[3]],
     };
     SetPalette( paletteIndex, colorsArgb8 );
+    memcpy( palettes[paletteIndex], sysColors, PaletteLength );
 }
 
 void Graphics::UpdatePalettes()
@@ -223,6 +233,35 @@ void Graphics::UpdatePalettes()
     memcpy( base, paletteBuf, paletteBufSize );
 
     al_unlock_bitmap( paletteBmp );
+}
+
+void Graphics::SwitchSystemPalette( int* newSystemPalette )
+{
+    activeSystemPalette = newSystemPalette;
+
+    for ( int i = 0; i < PaletteCount; i++ )
+    {
+        const uint8_t* sysColors = palettes[i];
+        int colorsArgb8[4] = 
+        {
+            0,
+            activeSystemPalette[sysColors[1]],
+            activeSystemPalette[sysColors[2]],
+            activeSystemPalette[sysColors[3]],
+        };
+        SetPalette( i, colorsArgb8 );
+    }
+    UpdatePalettes();
+}
+
+void Graphics::EnableGrayscale()
+{
+    SwitchSystemPalette( grayscalePalette );
+}
+
+void Graphics::DisableGrayscale()
+{
+    SwitchSystemPalette( systemPalette );
 }
 
 void Graphics::Begin()

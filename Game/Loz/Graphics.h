@@ -83,14 +83,20 @@ public:
     static void LoadSystemPalette( const int* colorsArgb8 );
     static ALLEGRO_COLOR GetSystemColor( int sysColor );
     static void SetColor( int paletteIndex, int colorIndex, int colorArgb8 );
-    static void SetPalette( int paletteIndex, const int* colorsArgb8 );
     static void SetColorIndexed( int paletteIndex, int colorIndex, int sysColor );
     static void SetPaletteIndexed( int paletteIndex, const uint8_t* sysColors );
     static void UpdatePalettes();
+
+    static void EnableGrayscale();
+    static void DisableGrayscale();
 
     static void SetViewParams( float scale, float x, float y );
     static void SetClip( int x, int y, int width, int height );
     static void ResetClip();
 
     static const SpriteAnim* GetAnimation( int slot, int animIndex );
+
+private:
+    static void SetPalette( int paletteIndex, const int* colorsArgb8 );
+    static void SwitchSystemPalette( int* newSystemPalette );
 };

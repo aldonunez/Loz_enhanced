@@ -577,17 +577,17 @@ static void SetPlayerColor()
 
 static void SetFlashPalette()
 {
-    static const int palette[] = 
+    static const uint8_t palette[] = 
     {
-        0x00000000,
-        0xFFFCFCFC,
-        0xFFFCFCFC,
-        0xFFFCFCFC
+        0x0F,
+        0x30,
+        0x30,
+        0x30
     };
 
     for ( int i = 2; i < BackgroundPalCount; i++ )
     {
-        Graphics::SetPalette( i, palette );
+        Graphics::SetPaletteIndexed( i, palette );
     }
 
     Graphics::UpdatePalettes();
