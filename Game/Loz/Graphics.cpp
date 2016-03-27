@@ -237,6 +237,9 @@ void Graphics::UpdatePalettes()
 
 void Graphics::SwitchSystemPalette( int* newSystemPalette )
 {
+    if ( activeSystemPalette == newSystemPalette )
+        return;
+
     activeSystemPalette = newSystemPalette;
 
     for ( int i = 0; i < PaletteCount; i++ )

@@ -878,6 +878,7 @@ void World::Update()
         if ( IsPlaying( lastMode ) && mode != Mode_WinGame )
         {
             CleanUpRoomItems();
+            Graphics::DisableGrayscale();
             if ( mode != Mode_Unfurl )
             {
                 OnLeavePlay();
