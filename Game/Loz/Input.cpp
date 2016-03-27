@@ -9,10 +9,24 @@
 #include "Input.h"
 
 
+enum InputAxis
+{
+    InputAxis_None,
+    InputAxis_Horizontal,
+    InputAxis_Vertical
+};
+
 struct ButtonMapping
 {
     uint8_t SrcCode;
     uint8_t DstCode;
+};
+
+struct AxisMapping
+{
+    uint8_t Stick;
+    uint8_t SrcAxis;
+    uint8_t DstAxis;
 };
 
 static ButtonMapping keyboardMappings[8] = 
@@ -25,6 +39,20 @@ static ButtonMapping keyboardMappings[8] =
     { ALLEGRO_KEY_S,        InputButtons::Select },
     { ALLEGRO_KEY_D,        InputButtons::B },
     { ALLEGRO_KEY_F,        InputButtons::A },
+};
+
+static ButtonMapping joystickButtonMappings[4] = 
+{
+    { 9,        InputButtons::Start },
+    { 8,        InputButtons::Select },
+    { 1,        InputButtons::B },
+    { 2,        InputButtons::A },
+};
+
+static AxisMapping joystickAxisMappings[2] = 
+{
+    { 2, 0,     InputAxis_Horizontal },
+    { 2, 1,     InputAxis_Vertical },
 };
 
 static InputButtons oldInputState( 0 );
@@ -139,12 +167,66 @@ static void PollKeyboard()
     }
 }
 
+static void PollJoystick()
+{
+    ALLEGRO_JOYSTICK* joystick = al_get_joystick( 0 );
+    if ( joystick == nullptr )
+        return;
+
+    int numButtons = al_get_joystick_num_buttons( joystick );
+    int numSticks = al_get_joystick_num_sticks( joystick );
+
+    ALLEGRO_JOYSTICK_STATE joystickState;
+    al_get_joystick_state( joystick, &joystickState );
+
+    for ( int i = 0; i < _countof( joystickButtonMappings ); i++ )
+    {
+        ButtonMapping& mapping = joystickButtonMappings[i];
+        if ( mapping.DstCode == InputButtons::None )
+            continue;
+
+        if ( mapping.SrcCode < numButtons && joystickState.button[mapping.SrcCode] > 0 )
+            inputState.Buttons |= mapping.DstCode;
+    }
+
+    for ( int i = 0; i < _countof( joystickAxisMappings ); i++ )
+    {
+        AxisMapping& mapping = joystickAxisMappings[i];
+        if ( mapping.DstAxis == InputAxis_None )
+            continue;
+
+        if ( mapping.Stick < numSticks )
+        {
+            int numAxes = al_get_joystick_num_axes( joystick, mapping.Stick );
+            if ( mapping.SrcAxis < numAxes )
+            {
+                float axisValue = joystickState.stick[mapping.Stick].axis[mapping.SrcAxis];
+                if ( axisValue > 0 )
+                {
+                    if ( mapping.DstAxis == InputAxis_Horizontal )
+                        inputState.Buttons |= InputButtons::Right;
+                    else
+                        inputState.Buttons |= InputButtons::Down;
+                }
+                else if ( axisValue < 0 )
+                {
+                    if ( mapping.DstAxis == InputAxis_Horizontal )
+                        inputState.Buttons |= InputButtons::Left;
+                    else
+                        inputState.Buttons |= InputButtons::Up;
+                }
+            }
+        }
+    }
+}
+
 static void Poll()
 {
     oldInputState = inputState;
     inputState = 0;
 
     PollKeyboard();
+    PollJoystick();
 }
 
 void Input::Update()

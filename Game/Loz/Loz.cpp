@@ -35,14 +35,18 @@ void Run()
     ALLEGRO_EVENT event = { 0 };
     ALLEGRO_EVENT_SOURCE* keyboardSource = al_get_keyboard_event_source();
     ALLEGRO_EVENT_SOURCE* displaySource = al_get_display_event_source( display );
+    ALLEGRO_EVENT_SOURCE* joystickSource = al_get_joystick_event_source();
 
     if ( keyboardSource == nullptr )
         return;
     if ( displaySource == nullptr )
         return;
+    if ( joystickSource == nullptr )
+        return;
 
     al_register_event_source( eventQ, keyboardSource );
     al_register_event_source( eventQ, displaySource );
+    al_register_event_source( eventQ, joystickSource );
 
     World world;
 
@@ -68,6 +72,10 @@ void Run()
                 ResizeView( event.display.width, event.display.height );
 
                 updated = true;
+            }
+            else if ( event.any.type == ALLEGRO_EVENT_JOYSTICK_CONFIGURATION )
+            {
+                al_reconfigure_joysticks();
             }
         }
 
@@ -157,6 +165,9 @@ bool InitAllegro()
         return false;
 
     if ( !al_install_keyboard() )
+        return false;
+
+    if ( !al_install_joystick() )
         return false;
 
     if ( !al_init_image_addon() )
