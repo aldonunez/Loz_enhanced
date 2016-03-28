@@ -56,7 +56,8 @@ Object::Object( ObjType type )
         fraction( 0 ),
         moving( 0 ),
         objTimer( 0 ),
-        stunTimer( 0 )
+        stunTimer( 0 ),
+        objFlags( 0 )
 {
     assert( type != 0 );
 
@@ -173,6 +174,11 @@ void Object::SetShoveDir( Direction dir )
 void Object::SetShoveDistance( int distance )
 {
     shoveDistance = distance;
+}
+
+ObjFlags Object::GetFlags()
+{
+    return objFlags;
 }
 
 void* Object::GetInterface( ObjInterfaces iface )

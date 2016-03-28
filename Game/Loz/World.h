@@ -848,7 +848,7 @@ private:
     void UpdateObservedPlayerPos();
     void UpdateRupees();
     void UpdateLiftItem();
-    void DrawObjects();
+    void DrawObjects( Object** objOverPlayer = nullptr );
     void DrawLinkLiftingItem( int itemId );
     void DrawSubmenu();
 

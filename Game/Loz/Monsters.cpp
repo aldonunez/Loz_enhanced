@@ -1422,6 +1422,7 @@ void LikeLike::Update()
             player->SetParalyzed( true );
             animator.durationFrames = animator.anim->length * 4;
             animator.time = 0;
+            objFlags.SetDrawAbovePlayer();
         }
     }
     else
@@ -1441,8 +1442,6 @@ void LikeLike::Update()
 
         if ( decoration != 0 )
             player->SetParalyzed( false );
-
-        // TODO: In this state, draw above the player.
     }
 }
 
@@ -4468,7 +4467,6 @@ void Wallmaster::UpdateMoving()
         player->SetX( objX );
         player->SetY( objY );
         player->GetAnimator()->Advance();
-        // TODO: In this state, draw above the player.
     }
     else
     {
@@ -4477,6 +4475,7 @@ void Wallmaster::UpdateMoving()
             holdingPlayer = true;
             player->SetState( Player::Paused );
             player->ResetShove();
+            objFlags.SetDrawAbovePlayer();
         }
         animator.Advance();
     }

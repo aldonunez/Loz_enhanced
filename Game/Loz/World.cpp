@@ -3335,12 +3335,17 @@ void World::DrawPlay()
     DrawRoom();
     Graphics::ResetClip();
 
-    DrawObjects();
+    Object* objOverPlayer = nullptr;
+
+    DrawObjects( &objOverPlayer );
 
     if ( IsLiftingItem() )
         DrawLinkLiftingItem( state.play.liftItemId );
     else
         player->Draw();
+
+    if ( objOverPlayer != nullptr )
+        objOverPlayer->DecoratedDraw();
 
     if ( IsUWMain( curRoomId ) )
         DrawDoors( curRoomId, true, 0, 0 );
@@ -3359,7 +3364,7 @@ void World::DrawSubmenu()
     menu.Draw( submenuOffsetY );
 }
 
-void World::DrawObjects()
+void World::DrawObjects( Object** objOverPlayer )
 {
     for ( int i = 0; i < MaxObjects; i++ )
     {
@@ -3367,7 +3372,14 @@ void World::DrawObjects()
 
         Object* obj = objects[i];
         if ( obj != nullptr && !obj->IsDeleted() )
-            obj->DecoratedDraw();
+        {
+            if ( !obj->GetFlags().GetDrawAbovePlayer()
+                || objOverPlayer == nullptr 
+                || *objOverPlayer != nullptr )
+                obj->DecoratedDraw();
+            else
+                *objOverPlayer = obj;
+        }
     }
 }
 

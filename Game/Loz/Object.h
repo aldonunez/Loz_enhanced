@@ -46,6 +46,31 @@ struct PlayerCollision
     operator bool() const { return Collides; }
 };
 
+struct ObjFlags
+{
+    enum
+    {
+        DrawAbovePlayer     = 1,
+    };
+
+    uint8_t Value;
+
+    ObjFlags( uint8_t value )
+        :   Value( value )
+    {
+    }
+
+    bool GetDrawAbovePlayer() const
+    {
+        return Value & DrawAbovePlayer;
+    }
+
+    void SetDrawAbovePlayer()
+    {
+        Value |= DrawAbovePlayer;
+    }
+};
+
 
 class Object
 {
@@ -67,6 +92,7 @@ protected:
     uint8_t     moving;
     uint8_t     objTimer;
     uint8_t     stunTimer;
+    ObjFlags    objFlags;
 
 public:
     Object( ObjType type );
@@ -92,6 +118,7 @@ public:
     void SetStunTimer( uint value );
     void SetShoveDir( Direction dir );
     void SetShoveDistance( int distance );
+    ObjFlags GetFlags();
 
     void DecrementObjectTimer();
     void DecrementStunTimer();
