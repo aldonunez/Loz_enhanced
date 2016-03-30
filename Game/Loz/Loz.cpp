@@ -140,16 +140,32 @@ void ResizeView( int screenWidth, int screenHeight )
     Graphics::SetViewParams( scale, offsetX, offsetY );
 }
 
+void AdjustForDpi( int& width, int& height )
+{
+#if _WIN32
+    HDC hDC = GetDC( NULL );
+    if ( hDC != NULL )
+    {
+        int dpiX = GetDeviceCaps( hDC, LOGPIXELSX );
+        int dpiY = GetDeviceCaps( hDC, LOGPIXELSY );
+        ReleaseDC( NULL, hDC );
+        width = MulDiv( width, dpiX, 96 );
+        height = MulDiv( height, dpiY, 96 );
+    }
+#endif
+}
+
 bool MakeDisplay()
 {
-    int width = StdViewWidth;
-    int height = StdViewHeight;
+    int width = StdViewWidth * 2;
+    int height = StdViewHeight * 2;
     int newFlags = ALLEGRO_RESIZABLE | ALLEGRO_PROGRAMMABLE_PIPELINE;
 
     newFlags |= ALLEGRO_DIRECT3D_INTERNAL;
 
     al_set_new_display_flags( al_get_new_display_flags() | newFlags );
 
+    AdjustForDpi( width, height );
     display = al_create_display( width, height );
     if ( display == nullptr )
         return false;
