@@ -20,6 +20,7 @@ const double FrameTime = 1 / 60.0;
 
 static ALLEGRO_EVENT_QUEUE* eventQ;
 static ALLEGRO_DISPLAY* display;
+static ALLEGRO_CONFIG* globalConfig;
 static uint32_t frameCounter;
 
 
@@ -175,6 +176,32 @@ bool MakeDisplay()
     return true;
 }
 
+ALLEGRO_CONFIG* LoadConfig()
+{
+    ALLEGRO_CONFIG* config = nullptr;
+    ALLEGRO_PATH* configPath = al_get_standard_path( ALLEGRO_USER_SETTINGS_PATH );
+
+    if ( configPath != nullptr )
+    {
+        al_set_path_filename( configPath, "loz.ini" );
+
+        const char* configPathStr = al_path_cstr( configPath, ALLEGRO_NATIVE_PATH_SEP );
+        if ( configPathStr != nullptr )
+        {
+            config = al_load_config_file( configPathStr );
+        }
+
+        al_destroy_path( configPath );
+    }
+
+    return config;
+}
+
+ALLEGRO_CONFIG* GetConfig()
+{
+    return globalConfig;
+}
+
 bool InitAllegro()
 {
     if ( !al_init() )
@@ -195,6 +222,8 @@ bool InitAllegro()
     if ( !al_init_acodec_addon() )
         return false;
 
+    globalConfig = LoadConfig();
+
     if ( !MakeDisplay() )
         return false;
 
@@ -207,6 +236,11 @@ bool InitAllegro()
 
     if ( !Sound::Init() )
         return false;
+
+    Input::Init();
+
+    al_destroy_config( globalConfig );
+    globalConfig = nullptr;
 
     return true;
 }

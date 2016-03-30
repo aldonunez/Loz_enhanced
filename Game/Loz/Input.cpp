@@ -18,42 +18,47 @@ enum InputAxis
 
 struct ButtonMapping
 {
-    uint8_t SrcCode;
-    uint8_t DstCode;
+    uint8_t     SrcCode;
+    uint8_t     DstCode;
+    const char* SettingName;
 };
 
 struct AxisMapping
 {
-    uint8_t Stick;
-    uint8_t SrcAxis;
-    uint8_t DstAxis;
+    uint8_t     Stick;
+    uint8_t     SrcAxis;
+    uint8_t     DstAxis;
+    const char* StickSettingName;
+    const char* AxisSettingName;
 };
 
 static ButtonMapping keyboardMappings[8] = 
 {
-    { ALLEGRO_KEY_RIGHT,    InputButtons::Right },
-    { ALLEGRO_KEY_LEFT,     InputButtons::Left },
-    { ALLEGRO_KEY_DOWN,     InputButtons::Down },
-    { ALLEGRO_KEY_UP,       InputButtons::Up },
-    { ALLEGRO_KEY_ENTER,    InputButtons::Start },
-    { ALLEGRO_KEY_S,        InputButtons::Select },
-    { ALLEGRO_KEY_D,        InputButtons::B },
-    { ALLEGRO_KEY_F,        InputButtons::A },
+    { ALLEGRO_KEY_RIGHT,    InputButtons::Right,    "key.button.right" },
+    { ALLEGRO_KEY_LEFT,     InputButtons::Left,     "key.button.left" },
+    { ALLEGRO_KEY_DOWN,     InputButtons::Down,     "key.button.down" },
+    { ALLEGRO_KEY_UP,       InputButtons::Up,       "key.button.up" },
+    { ALLEGRO_KEY_ENTER,    InputButtons::Start,    "key.button.start" },
+    { ALLEGRO_KEY_S,        InputButtons::Select,   "key.button.select" },
+    { ALLEGRO_KEY_D,        InputButtons::B,        "key.button.b" },
+    { ALLEGRO_KEY_F,        InputButtons::A,        "key.button.a" },
 };
 
 static ButtonMapping joystickButtonMappings[4] = 
 {
-    { 9,        InputButtons::Start },
-    { 8,        InputButtons::Select },
-    { 1,        InputButtons::B },
-    { 2,        InputButtons::A },
+    { 3,        InputButtons::Start,    "joy.button.start" },
+    { 2,        InputButtons::Select,   "joy.button.select" },
+    { 1,        InputButtons::B,        "joy.button.b" },
+    { 0,        InputButtons::A,        "joy.button.a" },
 };
 
 static AxisMapping joystickAxisMappings[2] = 
 {
-    { 2, 0,     InputAxis_Horizontal },
-    { 2, 1,     InputAxis_Vertical },
+    { 0, 0,     InputAxis_Horizontal,   "joy.h.stick", "joy.h.axis" },
+    { 0, 1,     InputAxis_Vertical,     "joy.v.stick", "joy.v.axis" },
 };
+
+static const char InputSection[] = "input";
 
 static InputButtons oldInputState( 0 );
 static InputButtons inputState( 0 );
@@ -232,4 +237,63 @@ static void Poll()
 void Input::Update()
 {
     Poll();
+}
+
+static bool ParseInt( const char* str, int& value )
+{
+    if ( str == nullptr )
+        return false;
+    char* endPtr = nullptr;
+    value = strtol( str, &endPtr, 10 );
+    return endPtr != str && *endPtr == '\0';
+}
+
+static void LoadButtonMappings( ButtonMapping* mappings, int count )
+{
+    ALLEGRO_CONFIG* config = GetConfig();
+
+    for ( int i = 0; i < count; i++ )
+    {
+        ButtonMapping& mapping = mappings[i];
+        int value;
+        const char* strValue = al_get_config_value( config, InputSection, mapping.SettingName );
+        if ( ParseInt( strValue, value ) )
+            mapping.SrcCode = value;
+    }
+}
+
+static void LoadAxisMappings( AxisMapping* mappings, int count )
+{
+    ALLEGRO_CONFIG* config = GetConfig();
+
+    for ( int i = 0; i < count; i++ )
+    {
+        AxisMapping& mapping = mappings[i];
+        int stick = 0;
+        int axis = 0;
+        const char* strValue = al_get_config_value( config, InputSection, mapping.StickSettingName );
+        if ( !ParseInt( strValue, stick ) )
+            continue;
+        strValue = al_get_config_value( config, InputSection, mapping.AxisSettingName );
+        if ( !ParseInt( strValue, axis ) )
+            continue;
+        mapping.Stick = stick;
+        mapping.SrcAxis = axis;
+    }
+}
+
+static void LoadMappings()
+{
+    ALLEGRO_CONFIG* config = GetConfig();
+    if ( config == nullptr )
+        return;
+
+    LoadButtonMappings( keyboardMappings, _countof( keyboardMappings ) );
+    LoadButtonMappings( joystickButtonMappings, _countof( joystickButtonMappings ) );
+    LoadAxisMappings( joystickAxisMappings, _countof( joystickAxisMappings ) );
+}
+
+void Input::Init()
+{
+    LoadMappings();
 }

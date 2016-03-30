@@ -44,6 +44,8 @@ struct InputButtons
 class Input
 {
 public:
+    static void Init();
+
     static InputButtons GetButtons();
 
     static bool IsKeyDown( int keyCode );
