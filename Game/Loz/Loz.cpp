@@ -54,18 +54,21 @@ void Run()
     world.Init();
 
     double startTime = al_get_time();
+    double waitSpan = 0;
 
     while ( true )
     {
         bool updated = false;
 
-        if ( !al_is_event_queue_empty( eventQ ) )
+        while ( al_wait_for_event_timed( eventQ, &event, waitSpan ) )
         {
-            al_wait_for_event( eventQ, &event );
+            waitSpan = 0;
             if ( event.any.type == ALLEGRO_EVENT_DISPLAY_CLOSE
                 || (event.any.type == ALLEGRO_EVENT_KEY_DOWN 
                 && event.keyboard.keycode == ALLEGRO_KEY_ESCAPE) )
-                break;
+            {
+                goto Done;
+            }
             else if ( event.any.type == ALLEGRO_EVENT_DISPLAY_RESIZE )
             {
                 al_acknowledge_resize( display );
@@ -100,7 +103,16 @@ void Run()
 
             al_flip_display();
         }
+
+        double timeLeft = startTime + FrameTime - al_get_time();
+        if ( timeLeft >= .002 )
+            waitSpan = timeLeft - .001;
+        else
+            waitSpan = 0;
     }
+
+Done:
+    ;
 }
 
 void ResizeView( int screenWidth, int screenHeight )
