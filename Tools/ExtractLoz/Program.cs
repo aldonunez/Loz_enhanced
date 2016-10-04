@@ -29,6 +29,8 @@ namespace ExtractLoz
 
     class Program
     {
+        delegate void Extractor( Options options );
+
         const int PrimarySquareTable = 0x1697C + 16;
         const int SecondarySquareTable = 0x169B4 + 16;
         const int SecretSquareTable = 0x16976 + 16;
@@ -46,56 +48,83 @@ namespace ExtractLoz
         {
             var options = Options.Parse( args );
 
+            if ( options.Error != null )
+            {
+                Console.Error.WriteLine( options.Error );
+                return;
+            }
+
             if ( options.Function == null )
             {
                 Console.WriteLine( "Nothing to work on." );
                 return;
             }
 
-            switch ( options.Function )
+            Dictionary<string, Extractor> extractorMap = new Dictionary<string, Extractor>();
+
+            extractorMap.Add( "overworldtiles", ExtractOverworldBundle );
+            extractorMap.Add( "underworldtiles", ExtractUnderworldBundle );
+            extractorMap.Add( "sprites", ExtractSpriteBundle );
+            extractorMap.Add( "text", ExtractTextBundle );
+            extractorMap.Add( "sound", ExtractSound );
+
+            Extractor extractor = null;
+
+            if ( options.Function == "all" )
             {
-            case "overworldtiles":
-                ExtractOverworldTiles( options );
-                ExtractOverworldTileAttrs( options );
-                ExtractOverworldMap( options );
-                ExtractOverworldMapAttrs( options );
-                ExtractOverworldMapSparseAttrs( options );
-                ExtractOverworldInfo( options );
-                ExtractOverworldInfoEx( options );
-                ExtractObjLists( options );
-                break;
-
-            case "underworldtiles":
-                ExtractUnderworldTiles( options );
-                ExtractUnderworldTileAttrs( options );
-                ExtractUnderworldMap( options );
-                ExtractUnderworldMapAttrs( options );
-                ExtractUnderworldInfo( options );
-                ExtractUnderworldCellarMap( options );
-                ExtractUnderworldCellarTiles( options );
-                ExtractUnderworldCellarTileAttrs( options );
-                break;
-
-            case "sprites":
-                ExtractSystemPalette( options );
-                ExtractSprites( options );
-                ExtractOWSpriteVRAM( options );
-                break;
-
-            case "text":
-                ExtractFont( options );
-                ExtractText( options );
-                ExtractCredits( options );
-                break;
-
-            case "sound":
-                ExtractSound( options );
-                break;
-
-            default:
-                Console.WriteLine( "Function not supported: {0}", options.Function );
-                break;
+                foreach ( var pair in extractorMap )
+                {
+                    Console.WriteLine( "Extracting {0} ...", pair.Key );
+                    pair.Value( options );
+                }
             }
+            else if ( extractorMap.TryGetValue( options.Function, out extractor ) )
+            {
+                Console.WriteLine( "Extracting {0} ...", options.Function );
+                extractor( options );
+            }
+            else
+            {
+                Console.Error.WriteLine( "Function not supported: {0}", options.Function );
+            }
+        }
+
+        private static void ExtractOverworldBundle( Options options )
+        {
+            ExtractOverworldTiles( options );
+            ExtractOverworldTileAttrs( options );
+            ExtractOverworldMap( options );
+            ExtractOverworldMapAttrs( options );
+            ExtractOverworldMapSparseAttrs( options );
+            ExtractOverworldInfo( options );
+            ExtractOverworldInfoEx( options );
+            ExtractObjLists( options );
+        }
+
+        private static void ExtractUnderworldBundle( Options options )
+        {
+            ExtractUnderworldTiles( options );
+            ExtractUnderworldTileAttrs( options );
+            ExtractUnderworldMap( options );
+            ExtractUnderworldMapAttrs( options );
+            ExtractUnderworldInfo( options );
+            ExtractUnderworldCellarMap( options );
+            ExtractUnderworldCellarTiles( options );
+            ExtractUnderworldCellarTileAttrs( options );
+        }
+
+        private static void ExtractSpriteBundle( Options options )
+        {
+            ExtractSystemPalette( options );
+            ExtractSprites( options );
+            ExtractOWSpriteVRAM( options );
+        }
+
+        private static void ExtractTextBundle( Options options )
+        {
+            ExtractFont( options );
+            ExtractText( options );
+            ExtractCredits( options );
         }
 
         private static void ExtractSound( Options options )
@@ -161,7 +190,7 @@ namespace ExtractLoz
             using ( ExtractNsf.WaveWriter waveWriter = new ExtractNsf.WaveWriter( SampleRate, outPath ) )
             {
                 emu.SampleRate = SampleRate;
-                emu.LoadFile( options.RomPath );
+                emu.LoadFile( options.NsfPath );
                 emu.StartTrack( item.Track );
 
                 waveWriter.EnableStereo();
