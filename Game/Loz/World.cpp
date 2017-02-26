@@ -286,6 +286,58 @@ World::TileActionFunc World::sActionFuncs[] =
     &World::BlockTileAction,
 };
 
+World::UpdateFunc World::sModeFuncs[Modes] = 
+{
+    nullptr,
+    &World::UpdateGameMenu,
+    &World::UpdateLoadLevel,
+    &World::UpdateUnfurl,
+    &World::UpdateEnter,
+    &World::UpdatePlay,
+    &World::UpdateLeave,
+    &World::UpdateScroll,
+    &World::UpdateContinueQuestion,
+    &World::UpdatePlay,
+    &World::UpdateLeaveCellar,
+    &World::UpdatePlay,
+    nullptr,
+    nullptr,
+    &World::UpdateRegisterMenu,
+    &World::UpdateEliminateMenu,
+    &World::UpdateStairsState,
+    &World::UpdateDie,
+    &World::UpdateEndLevel,
+    &World::UpdateWinGame,
+    &World::UpdatePlayCellar,
+    &World::UpdatePlayCave,
+};
+
+World::DrawFunc World::sDrawFuncs[Modes] = 
+{
+    nullptr,
+    &World::DrawGameMenu,
+    &World::DrawLoadLevel,
+    &World::DrawUnfurl,
+    &World::DrawEnter,
+    &World::DrawPlay,
+    &World::DrawLeave,
+    &World::DrawScroll,
+    &World::DrawContinueQuestion,
+    &World::DrawPlay,
+    &World::DrawLeaveCellar,
+    &World::DrawPlay,
+    nullptr,
+    nullptr,
+    &World::DrawGameMenu,
+    &World::DrawGameMenu,
+    &World::DrawStairsState,
+    &World::DrawDie,
+    &World::DrawEndLevel,
+    &World::DrawWinGame,
+    &World::DrawPlayCellar,
+    &World::DrawPlayCave,
+};
+
 World* World::sWorld;
 
 Player* player;
@@ -626,8 +678,7 @@ World::World()
     :   curRoomId( 0 ),
         curTileMapIndex( 0 ),
         lastMode( Mode_Demo ),
-        curUpdate( &World::UpdatePlay ),
-        curDraw( &World::DrawPlay ),
+        curMode( Mode_Play ),
         curColorSeqNum( 0 ),
         darkRoomFadeStep( 0 ),
         curMazeStep( 0 ),
@@ -895,14 +946,17 @@ void World::Update()
         nextGameMenu = nullptr;
     }
 
-    (this->*curUpdate)();
+    UpdateFunc update = sModeFuncs[curMode];
+    (this->*update)();
 }
 
 void World::Draw()
 {
     if ( statusBarVisible )
         statusBar.Draw( submenuOffsetY );
-    (this->*curDraw)();
+
+    DrawFunc draw = sDrawFuncs[curMode];
+    (this->*draw)();
 }
 
 void World::DrawRoom()
@@ -959,7 +1013,7 @@ void World::EliminateFile( const std::shared_ptr<ProfileSummarySnapshot>& summar
 
 bool World::IsPlaying()
 {
-    return sWorld->curUpdate == &UpdatePlay;
+    return IsPlaying( sWorld->curMode );
 }
 
 bool World::IsPlaying( GameMode mode )
@@ -972,59 +1026,16 @@ bool World::IsPlaying( GameMode mode )
 
 bool World::IsPlayingCave()
 {
-    return (curUpdate == &World::UpdatePlayCave)
-        || (curUpdate == &World::UpdatePlay && state.play.roomType == PlayState::Cave);
+    return GetMode() == Mode_PlayCave;
 }
 
 GameMode World::GetMode()
 {
-    // TODO: at least store the mode in a field when you change mode.
-    // TODO: long term, do it more like the original game.
-
-    if ( sWorld->curUpdate == &World::UpdatePlayCellar )
-        return Mode_PlayCellar;
-    if ( sWorld->curUpdate == &World::UpdatePlayCave )
+    if ( sWorld->curMode == Mode_InitPlayCave )
         return Mode_PlayCave;
-    if ( sWorld->curUpdate == &World::UpdatePlay )
-    {
-        switch ( sWorld->state.play.roomType )
-        {
-        case PlayState::Regular:    return Mode_Play;
-        case PlayState::Cellar:     return Mode_PlayCellar;
-        case PlayState::Cave:       return Mode_PlayCave;
-        }
-    }
-    if ( sWorld->curUpdate == &World::UpdateStairsState )
-        return Mode_Stairs;
-    if ( sWorld->curUpdate == &World::UpdateLeave )
-        return Mode_Leave;
-    if ( sWorld->curUpdate == &World::UpdateLeaveCellar )
-        return Mode_LeaveCellar;
-    if ( sWorld->curUpdate == &World::UpdateEnter )
-        return Mode_Enter;
-    if ( sWorld->curUpdate == &World::UpdateLoadLevel )
-        return Mode_LoadLevel;
-    if ( sWorld->curUpdate == &World::UpdateScroll )
-        return Mode_Scroll;
-    if ( sWorld->curUpdate == &World::UpdateUnfurl )
-        return Mode_Unfurl;
-    if ( sWorld->curUpdate == &World::UpdateWinGame )
-        return Mode_WinGame;
-    if ( sWorld->curUpdate == &World::UpdateDie )
-        return Mode_Death;
-    if ( sWorld->curUpdate == &World::UpdateEndLevel )
-        return Mode_EndLevel;
-    if ( sWorld->curUpdate == &World::UpdateGameMenu )
-        return Mode_GameMenu;
-    if ( sWorld->curUpdate == &World::UpdateRegisterMenu )
-        return Mode_Register;
-    if ( sWorld->curUpdate == &World::UpdateEliminateMenu )
-        return Mode_Elimination;
-    if ( sWorld->curUpdate == &World::UpdateContinueQuestion )
-        return Mode_ContinueQuestion;
-
-    assert( false );
-    return Mode_Demo;
+    if ( sWorld->curMode == Mode_InitPlayCellar )
+        return Mode_PlayCellar;
+    return sWorld->curMode;
 }
 
 int World::GetMarginRight()
@@ -2552,8 +2563,16 @@ void World::LoadLayout( int uniqueRoomId, int tileMapIndex, bool owTileFormat )
 
 void World::GotoPlay( PlayState::RoomType roomType )
 {
-    curUpdate = &World::UpdatePlay;
-    curDraw = &World::DrawPlay;
+    switch ( roomType )
+    {
+    case PlayState::Regular:  curMode = Mode_Play;        break;
+    case PlayState::Cave:     curMode = Mode_PlayCave;    break;
+    case PlayState::Cellar:   curMode = Mode_PlayCellar;  break;
+    default:
+        assert( false );
+        curMode = Mode_Play;
+        break;
+    }
     curColorSeqNum = 0;
     tempShutters = false;
     roomObjCount = 0;
@@ -3803,8 +3822,7 @@ void World::GotoScroll( Direction dir )
     state.scroll.curRoomId = curRoomId;
     state.scroll.scrollDir = dir;
     state.scroll.substate = ScrollState::Start;
-    curUpdate = &World::UpdateScroll;
-    curDraw = &World::DrawScroll;
+    curMode = Mode_Scroll;
 }
 
 void World::GotoScroll( Direction dir, int currentRoomId )
@@ -4060,8 +4078,7 @@ void World::GotoLeave( Direction dir )
     state.leave.curRoomId = curRoomId;
     state.leave.scrollDir = dir;
     state.leave.timer = LeaveState::StateTime;
-    curUpdate = &World::UpdateLeave;
-    curDraw = &World::DrawLeave;
+    curMode = Mode_Leave;
 }
 
 void World::GotoLeave( Direction dir, int currentRoomId )
@@ -4106,8 +4123,7 @@ void World::GotoEnter( Direction dir )
     state.enter.timer = 0;
     state.enter.playerPriority = SpritePri_AboveBg;
     state.enter.playerSpeed = Player::WalkSpeed;
-    curUpdate = &World::UpdateEnter;
-    curDraw = &World::DrawEnter;
+    curMode = Mode_Enter;
 }
 
 void MovePlayer( Direction dir, int speed, int& fraction )
@@ -4297,8 +4313,7 @@ void World::GotoLoadLevel( int level, bool restartOW )
     state.loadLevel.timer = 0;
     state.loadLevel.restartOW = restartOW;
 
-    curUpdate = &World::UpdateLoadLevel;
-    curDraw = &World::DrawLoadLevel;
+    curMode = Mode_LoadLevel;
 }
 
 void World::SetPlayerExitPosOW( int roomId )
@@ -4383,8 +4398,7 @@ void World::GotoUnfurl( bool restartOW )
 
     ClearLevelData();
 
-    curUpdate = &World::UpdateUnfurl;
-    curDraw = &World::DrawUnfurl;
+    curMode = Mode_Unfurl;
 }
 
 void World::UpdateUnfurl()
@@ -4468,8 +4482,7 @@ void World::EndLevel()
 void World::GotoEndLevel()
 {
     state.endLevel.substate = EndLevelState::Start;
-    curUpdate = &World::UpdateEndLevel;
-    curDraw = &World::DrawEndLevel;
+    curMode = Mode_EndLevel;
 }
 
 void World::UpdateEndLevel()
@@ -4591,8 +4604,7 @@ void World::GotoWinGame()
     state.winGame.stepTimer = 0;
     state.winGame.npcVisual = WinGameState::Npc_Stand;
 
-    curUpdate = &World::UpdateWinGame;
-    curDraw = &World::DrawWinGame;
+    curMode = Mode_WinGame;
 }
 
 void World::UpdateWinGame()
@@ -4843,8 +4855,7 @@ void World::GotoStairs( int tileRef )
     state.stairs.tileRef = tileRef;
     state.stairs.playerPriority = SpritePri_AboveBg;
 
-    curUpdate = &World::UpdateStairsState;
-    curDraw = &World::DrawStairsState;
+    curMode = Mode_Stairs;
 }
 
 void World::UpdateStairsState()
@@ -4922,8 +4933,7 @@ void World::GotoPlayCellar()
     state.playCellar.substate = PlayCellarState::Start;
     state.playCellar.playerPriority = SpritePri_None;
 
-    curUpdate = &World::UpdatePlayCellar;
-    curDraw = &World::DrawPlayCellar;
+    curMode = Mode_InitPlayCellar;
 }
 
 void World::UpdatePlayCellar()
@@ -5029,8 +5039,7 @@ void World::GotoLeaveCellar()
 {
     state.leaveCellar.substate = LeaveCellarState::Start;
 
-    curUpdate = &World::UpdateLeaveCellar;
-    curDraw = &World::DrawLeaveCellar;
+    curMode = Mode_LeaveCellar;
 }
 
 void World::UpdateLeaveCellar()
@@ -5160,8 +5169,7 @@ void World::GotoPlayCave()
 {
     state.playCave.substate = PlayCaveState::Start;
 
-    curUpdate = &World::UpdatePlayCave;
-    curDraw = &World::DrawPlayCave;
+    curMode = Mode_InitPlayCave;
 }
 
 void World::UpdatePlayCave()
@@ -5239,8 +5247,7 @@ void World::GotoDie()
 {
     state.death.substate = DeathState::Start;
 
-    curUpdate = &World::UpdateDie;
-    curDraw = &World::DrawDie;
+    curMode = Mode_Death;
 }
 
 void World::UpdateDie()
@@ -5412,8 +5419,7 @@ void World::GotoContinueQuestion()
     state.continueQuestion.substate = ContinueState::Start;
     state.continueQuestion.selectedIndex = 0;
 
-    curUpdate = &World::UpdateContinueQuestion;
-    curDraw = &World::DrawContinueQuestion;
+    curMode = Mode_ContinueQuestion;
 }
 
 void World::UpdateContinueQuestion()
@@ -5509,8 +5515,7 @@ void World::GotoFileMenu( const std::shared_ptr<ProfileSummarySnapshot>& summari
         delete nextGameMenu;
 
     nextGameMenu = new GameMenu( summaries );
-    curUpdate = &World::UpdateGameMenu;
-    curDraw = &World::DrawGameMenu;
+    curMode = Mode_GameMenu;
 }
 
 void World::GotoRegisterMenu( const std::shared_ptr<ProfileSummarySnapshot>& summaries )
@@ -5519,8 +5524,7 @@ void World::GotoRegisterMenu( const std::shared_ptr<ProfileSummarySnapshot>& sum
         delete nextGameMenu;
 
     nextGameMenu = new RegisterMenu( summaries );
-    curUpdate = &World::UpdateRegisterMenu;
-    curDraw = &World::DrawGameMenu;
+    curMode = Mode_Register;
 }
 
 void World::GotoEliminateMenu( const std::shared_ptr<ProfileSummarySnapshot>& summaries )
@@ -5529,8 +5533,7 @@ void World::GotoEliminateMenu( const std::shared_ptr<ProfileSummarySnapshot>& su
         delete nextGameMenu;
 
     nextGameMenu = new EliminateMenu( summaries );
-    curUpdate = &World::UpdateEliminateMenu;
-    curDraw = &World::DrawGameMenu;
+    curMode = Mode_Elimination;
 }
 
 void World::UpdateGameMenu()

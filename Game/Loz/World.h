@@ -217,6 +217,7 @@ private:
     static const int LoadingTileActions = 4;
     static const int SparseAttrs = 11;
     static const int RoomHistoryLength = 6;
+    static const int Modes = Mode_Max;
 
     struct LevelDirectory
     {
@@ -284,6 +285,8 @@ private:
 
     static World* sWorld;
     static TileActionFunc sActionFuncs[TileActions];
+    static UpdateFunc sModeFuncs[Modes];
+    static DrawFunc sDrawFuncs[Modes];
 
     LevelDirectory  directory;
     LevelInfoBlock  infoBlock;
@@ -312,8 +315,7 @@ private:
     ALLEGRO_BITMAP* doorsBmp;
 
     GameMode        lastMode;
-    UpdateFunc      curUpdate;
-    DrawFunc        curDraw;
+    GameMode        curMode;
     StatusBar       statusBar;
     Submenu         menu;
     Credits*        credits;
