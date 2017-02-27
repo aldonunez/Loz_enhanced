@@ -5551,10 +5551,10 @@ void World::UpdateContinueQuestion()
         if ( state.continueQuestion.timer == 0 )
         {
             statusBarVisible = true;
+            Sound::StopAll();
 
             if ( state.continueQuestion.selectedIndex == 0 )
             {
-                Sound::StopAll();
                 // So, that the OW song is played in the Enter mode.
                 fromUnderground = 2;
                 delete player;
