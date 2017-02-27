@@ -359,6 +359,8 @@ private:
             LoadRoom,
             FadeIn,
             Walk,
+
+            MaxSubstate
         };
 
         Substate        substate;
@@ -380,6 +382,8 @@ private:
 
             Wait,
             LoadOverworldRoom,
+
+            MaxSubstate
         };
 
         Substate        substate;
@@ -396,6 +400,8 @@ private:
             Wait,
             LoadRoom,
             Walk,
+
+            MaxSubstate
         };
 
         Substate        substate;
@@ -413,6 +419,8 @@ private:
             FadeOut,
             LoadRoom,
             Scroll,
+
+            MaxSubstate
         };
 
         static const int StateTime = 32;
@@ -451,6 +459,8 @@ private:
             FadeIn,
             Walk,
             WalkCave,
+
+            MaxSubstate
         };
 
         static const int StateTime = 2;
@@ -510,6 +520,8 @@ private:
             Wait2,
             Furl,
             Wait3,
+
+            MaxSubstate
         };
 
         static const int Wait1Time = 0x30;
@@ -537,7 +549,9 @@ private:
             Text2,
             Hold3,
             NoObjects,
-            Credits
+            Credits,
+
+            MaxSubstate
         };
 
         enum NpcVisual
@@ -567,6 +581,8 @@ private:
             Start,
             Walk,
             WalkCave,
+
+            MaxSubstate
         };
 
         Substate        substate;
@@ -592,6 +608,8 @@ private:
             Spark,
             Wait2,
             GameOver,
+
+            MaxSubstate
         };
 
         Substate    substate;
@@ -606,6 +624,8 @@ private:
             Start,
             Idle,
             Chosen,
+
+            MaxSubstate
         };
 
         Substate    substate;
@@ -664,6 +684,12 @@ private:
     bool            statusBarVisible;
     uint8_t         levelKillCounts[LevelBlockRooms];
     uint8_t         roomHistory[RoomHistoryLength];
+
+    static UpdateFunc sLeaveCellarFuncs[LeaveCellarState::MaxSubstate];
+    static UpdateFunc sScrollFuncs[ScrollState::MaxSubstate];
+    static UpdateFunc sEndLevelFuncs[EndLevelState::MaxSubstate];
+    static UpdateFunc sWinGameFuncs[WinGameState::MaxSubstate];
+    static UpdateFunc sDeathFuncs[DeathState::MaxSubstate];
 
 public:
     World();
@@ -875,6 +901,11 @@ private:
     void GotoScroll( Direction dir );
     void GotoScroll( Direction dir, int currentRoomId );
     void UpdateScroll();
+    void UpdateScroll_Start();
+    void UpdateScroll_AnimatingColors();
+    void UpdateScroll_FadeOut();
+    void UpdateScroll_LoadRoom();
+    void UpdateScroll_Scroll();
     void DrawScroll();
 
     void GotoLeave( Direction dir );
@@ -896,10 +927,25 @@ private:
 
     void GotoEndLevel();
     void UpdateEndLevel();
+    void UpdateEndLevel_Start();
+    void UpdateEndLevel_Wait();
+    void UpdateEndLevel_Flash();
+    void UpdateEndLevel_FillHearts();
+    void UpdateEndLevel_Furl();
     void DrawEndLevel();
 
     void GotoWinGame();
     void UpdateWinGame();
+    void UpdateWinGame_Start();
+    void UpdateWinGame_Text1();
+    void UpdateWinGame_Stand();
+    void UpdateWinGame_Hold1();
+    void UpdateWinGame_Colors();
+    void UpdateWinGame_Hold2();
+    void UpdateWinGame_Text2();
+    void UpdateWinGame_Hold3();
+    void UpdateWinGame_NoObjects();
+    void UpdateWinGame_Credits();
     void DrawWinGame();
 
     void GotoStairs( int tileRef );
@@ -912,6 +958,13 @@ private:
 
     void GotoLeaveCellar();
     void UpdateLeaveCellar();
+    void UpdateLeaveCellar_Start();
+    void UpdateLeaveCellar_FadeOut();
+    void UpdateLeaveCellar_LoadRoom();
+    void UpdateLeaveCellar_FadeIn();
+    void UpdateLeaveCellar_Walk();
+    void UpdateLeaveCellar_Wait();
+    void UpdateLeaveCellar_LoadOverworldRoom();
     void DrawLeaveCellar();
 
     void GotoPlayCave();
@@ -920,6 +973,15 @@ private:
 
     void GotoDie();
     void UpdateDie();
+    void UpdateDie_Start();
+    void UpdateDie_Flash();
+    void UpdateDie_Wait1();
+    void UpdateDie_Turn();
+    void UpdateDie_Fade();
+    void UpdateDie_GrayLink();
+    void UpdateDie_Spark();
+    void UpdateDie_Wait2();
+    void UpdateDie_GameOver();
     void DrawDie();
 
     void GotoContinueQuestion();

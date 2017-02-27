@@ -338,6 +338,64 @@ World::DrawFunc World::sDrawFuncs[Modes] =
     &World::DrawPlayCave,
 };
 
+World::UpdateFunc World::sEndLevelFuncs[EndLevelState::MaxSubstate] = 
+{
+    &World::UpdateEndLevel_Start,
+    &World::UpdateEndLevel_Wait,
+    &World::UpdateEndLevel_Flash,
+    &World::UpdateEndLevel_FillHearts,
+    &World::UpdateEndLevel_Wait,
+    &World::UpdateEndLevel_Furl,
+    &World::UpdateEndLevel_Wait,
+};
+
+World::UpdateFunc World::sWinGameFuncs[WinGameState::MaxSubstate] = 
+{
+    &World::UpdateWinGame_Start,
+    &World::UpdateWinGame_Text1,
+    &World::UpdateWinGame_Stand,
+    &World::UpdateWinGame_Hold1,
+    &World::UpdateWinGame_Colors,
+    &World::UpdateWinGame_Hold2,
+    &World::UpdateWinGame_Text2,
+    &World::UpdateWinGame_Hold3,
+    &World::UpdateWinGame_NoObjects,
+    &World::UpdateWinGame_Credits,
+};
+
+World::UpdateFunc World::sScrollFuncs[ScrollState::MaxSubstate] = 
+{
+    &World::UpdateScroll_Start,
+    &World::UpdateScroll_AnimatingColors,
+    &World::UpdateScroll_FadeOut,
+    &World::UpdateScroll_LoadRoom,
+    &World::UpdateScroll_Scroll,
+};
+
+World::UpdateFunc World::sDeathFuncs[DeathState::MaxSubstate] = 
+{
+    &World::UpdateDie_Start,
+    &World::UpdateDie_Flash,
+    &World::UpdateDie_Wait1,
+    &World::UpdateDie_Turn,
+    &World::UpdateDie_Fade,
+    &World::UpdateDie_GrayLink,
+    &World::UpdateDie_Spark,
+    &World::UpdateDie_Wait2,
+    &World::UpdateDie_GameOver,
+};
+
+World::UpdateFunc World::sLeaveCellarFuncs[LeaveCellarState::MaxSubstate] = 
+{
+    &World::UpdateLeaveCellar_Start,
+    &World::UpdateLeaveCellar_FadeOut,
+    &World::UpdateLeaveCellar_LoadRoom,
+    &World::UpdateLeaveCellar_FadeIn,
+    &World::UpdateLeaveCellar_Walk,
+    &World::UpdateLeaveCellar_Wait,
+    &World::UpdateLeaveCellar_LoadOverworldRoom,
+};
+
 World* World::sWorld;
 
 Player* player;
@@ -3870,180 +3928,187 @@ bool World::CalcMazeStayPut( Direction dir )
 
 void World::UpdateScroll()
 {
-    if ( state.scroll.substate == ScrollState::Start )
+    UpdateFunc update = sScrollFuncs[state.scroll.substate];
+    (this->*update)();
+}
+
+void World::UpdateScroll_Start()
+{
+    int roomRow;
+    int roomCol;
+
+    GetWorldCoord( state.scroll.curRoomId, roomRow, roomCol );
+    Util::MoveSimple( roomCol, roomRow, state.scroll.scrollDir, 1 );
+
+    int nextRoomId;
+    if ( CalcMazeStayPut( state.scroll.scrollDir ) )
+        nextRoomId = state.scroll.curRoomId;
+    else
+        nextRoomId = MakeRoomId( roomRow, roomCol );
+
+    state.scroll.nextRoomId = nextRoomId;
+    state.scroll.substate = ScrollState::AnimatingColors;
+}
+
+void World::UpdateScroll_AnimatingColors()
+{
+    if ( curColorSeqNum == 0 )
     {
-        int roomRow;
-        int roomCol;
-
-        GetWorldCoord( state.scroll.curRoomId, roomRow, roomCol );
-        Util::MoveSimple( roomCol, roomRow, state.scroll.scrollDir, 1 );
-
-        int nextRoomId;
-        if ( CalcMazeStayPut( state.scroll.scrollDir ) )
-            nextRoomId = state.scroll.curRoomId;
-        else
-            nextRoomId = MakeRoomId( roomRow, roomCol );
-
-        state.scroll.nextRoomId = nextRoomId;
-        state.scroll.substate = ScrollState::AnimatingColors;
+        state.scroll.substate = ScrollState::LoadRoom;
+        return;
     }
-    else if ( state.scroll.substate == ScrollState::Scroll )
+
+    if ( (GetFrameCounter() & 4) != 0 )
     {
-        if ( state.scroll.timer > 0 )
-        {
-            state.scroll.timer--;
-            return;
-        }
+        curColorSeqNum--;
 
-        if ( state.scroll.offsetX == 0 && state.scroll.offsetY == 0 )
-        {
-            GotoEnter( state.scroll.scrollDir );
-            if ( IsOverworld() && state.scroll.nextRoomId == 0x0F )
-                Sound::PlayEffect( SEffect_secret );
-            return;
-        }
+        const ColorSeq* colorSeq = (ColorSeq*) extraData.GetItem( Extra_PondColors );
+        int color = colorSeq->Colors[curColorSeqNum];
+        Graphics::SetColorIndexed( 3, 3, color );
+        Graphics::UpdatePalettes();
 
-        state.scroll.offsetX += state.scroll.speedX;
-        state.scroll.offsetY += state.scroll.speedY;
-
-        Limits playerLimits = Player::GetPlayerLimits();
-
-        if ( state.scroll.speedX != 0 )
-        {
-            int x = player->GetX() + state.scroll.speedX;
-            if ( x < playerLimits[1] )
-                x = playerLimits[1];
-            else if ( x > playerLimits[0] )
-                x = playerLimits[0];
-            player->SetX( x );
-        }
-        else
-        {
-            int y = player->GetY() + state.scroll.speedY;
-            if ( y < playerLimits[3] )
-                y = playerLimits[3];
-            else if ( y > playerLimits[2] )
-                y = playerLimits[2];
-            player->SetY( y );
-        }
-
-        player->GetAnimator()->Advance();
-    }
-    else if ( state.scroll.substate == ScrollState::AnimatingColors )
-    {
         if ( curColorSeqNum == 0 )
-        {
             state.scroll.substate = ScrollState::LoadRoom;
-            return;
-        }
-
-        if ( (GetFrameCounter() & 4) != 0 )
-        {
-            curColorSeqNum--;
-
-            const ColorSeq* colorSeq = (ColorSeq*) extraData.GetItem( Extra_PondColors );
-            int color = colorSeq->Colors[curColorSeqNum];
-            Graphics::SetColorIndexed( 3, 3, color );
-            Graphics::UpdatePalettes();
-
-            if ( curColorSeqNum == 0 )
-                state.scroll.substate = ScrollState::LoadRoom;
-        }
     }
-    else if ( state.scroll.substate == ScrollState::FadeOut )
+}
+
+void World::UpdateScroll_FadeOut()
+{
+    if ( state.scroll.timer == 0 )
     {
-        if ( state.scroll.timer == 0 )
+        for ( int i = 0; i < 2; i++ )
         {
-            for ( int i = 0; i < 2; i++ )
-            {
-                Graphics::SetPaletteIndexed( i + 2, infoBlock.DarkPaletteSeq[darkRoomFadeStep][i] );
-            }
-            Graphics::UpdatePalettes();
-
-            darkRoomFadeStep++;
-
-            if ( darkRoomFadeStep == 4 )
-            {
-                state.scroll.substate = ScrollState::Scroll;
-                state.scroll.timer = ScrollState::StateTime;
-            }
-            else
-            {
-                state.scroll.timer = 9;
-            }
+            Graphics::SetPaletteIndexed( i + 2, infoBlock.DarkPaletteSeq[darkRoomFadeStep][i] );
         }
-        else
-        {
-            state.scroll.timer--;
-        }
-    }
-    else if ( state.scroll.substate == ScrollState::LoadRoom )
-    {
-        if ( state.scroll.scrollDir == Dir_Down 
-            && !IsOverworld()
-            && curRoomId == infoBlock.StartRoomId )
-        {
-            GotoLoadLevel( 0 );
-            return;
-        }
+        Graphics::UpdatePalettes();
 
-        state.scroll.offsetX = 0;
-        state.scroll.offsetY = 0;
-        state.scroll.speedX = 0;
-        state.scroll.speedY = 0;
-        state.scroll.oldMapToNewMapDistX = 0;
-        state.scroll.oldMapToNewMapDistY = 0;
+        darkRoomFadeStep++;
 
-        switch ( state.scroll.scrollDir )
-        {
-        case Dir_Left:
-            state.scroll.offsetX = -TileMapWidth;
-            state.scroll.speedX = ScrollSpeed;
-            state.scroll.oldMapToNewMapDistX = TileMapWidth;
-            break;
-
-        case Dir_Right:
-            state.scroll.offsetX = TileMapWidth;
-            state.scroll.speedX = -ScrollSpeed;
-            state.scroll.oldMapToNewMapDistX = -TileMapWidth;
-            break;
-
-        case Dir_Up:
-            state.scroll.offsetY = -TileMapHeight;
-            state.scroll.speedY = ScrollSpeed;
-            state.scroll.oldMapToNewMapDistY = TileMapHeight;
-            break;
-
-        case Dir_Down:
-            state.scroll.offsetY = TileMapHeight;
-            state.scroll.speedY = -ScrollSpeed;
-            state.scroll.oldMapToNewMapDistY = -TileMapHeight;
-            break;
-        }
-
-        state.scroll.oldRoomId = curRoomId;
-
-        int nextRoomId = state.scroll.nextRoomId;
-        int nextTileMapIndex = (curTileMapIndex + 1) % 2;
-        state.scroll.oldTileMapIndex = curTileMapIndex;
-
-        tempShutterRoomId = nextRoomId;
-        tempShutterDoorDir = Util::GetOppositeDir( state.scroll.scrollDir );
-
-        LoadRoom( nextRoomId, nextTileMapIndex );
-
-        UWRoomAttrs& uwRoomAttrs = (UWRoomAttrs&) roomAttrs[nextRoomId];
-        if ( uwRoomAttrs.IsDark() && darkRoomFadeStep == 0 )
-        {
-            state.scroll.substate = ScrollState::FadeOut;
-            state.scroll.timer = 9;
-        }
-        else
+        if ( darkRoomFadeStep == 4 )
         {
             state.scroll.substate = ScrollState::Scroll;
             state.scroll.timer = ScrollState::StateTime;
         }
+        else
+        {
+            state.scroll.timer = 9;
+        }
     }
+    else
+    {
+        state.scroll.timer--;
+    }
+}
+
+void World::UpdateScroll_LoadRoom()
+{
+    if ( state.scroll.scrollDir == Dir_Down 
+        && !IsOverworld()
+        && curRoomId == infoBlock.StartRoomId )
+    {
+        GotoLoadLevel( 0 );
+        return;
+    }
+
+    state.scroll.offsetX = 0;
+    state.scroll.offsetY = 0;
+    state.scroll.speedX = 0;
+    state.scroll.speedY = 0;
+    state.scroll.oldMapToNewMapDistX = 0;
+    state.scroll.oldMapToNewMapDistY = 0;
+
+    switch ( state.scroll.scrollDir )
+    {
+    case Dir_Left:
+        state.scroll.offsetX = -TileMapWidth;
+        state.scroll.speedX = ScrollSpeed;
+        state.scroll.oldMapToNewMapDistX = TileMapWidth;
+        break;
+
+    case Dir_Right:
+        state.scroll.offsetX = TileMapWidth;
+        state.scroll.speedX = -ScrollSpeed;
+        state.scroll.oldMapToNewMapDistX = -TileMapWidth;
+        break;
+
+    case Dir_Up:
+        state.scroll.offsetY = -TileMapHeight;
+        state.scroll.speedY = ScrollSpeed;
+        state.scroll.oldMapToNewMapDistY = TileMapHeight;
+        break;
+
+    case Dir_Down:
+        state.scroll.offsetY = TileMapHeight;
+        state.scroll.speedY = -ScrollSpeed;
+        state.scroll.oldMapToNewMapDistY = -TileMapHeight;
+        break;
+    }
+
+    state.scroll.oldRoomId = curRoomId;
+
+    int nextRoomId = state.scroll.nextRoomId;
+    int nextTileMapIndex = (curTileMapIndex + 1) % 2;
+    state.scroll.oldTileMapIndex = curTileMapIndex;
+
+    tempShutterRoomId = nextRoomId;
+    tempShutterDoorDir = Util::GetOppositeDir( state.scroll.scrollDir );
+
+    LoadRoom( nextRoomId, nextTileMapIndex );
+
+    UWRoomAttrs& uwRoomAttrs = (UWRoomAttrs&) roomAttrs[nextRoomId];
+    if ( uwRoomAttrs.IsDark() && darkRoomFadeStep == 0 )
+    {
+        state.scroll.substate = ScrollState::FadeOut;
+        state.scroll.timer = 9;
+    }
+    else
+    {
+        state.scroll.substate = ScrollState::Scroll;
+        state.scroll.timer = ScrollState::StateTime;
+    }
+}
+
+void World::UpdateScroll_Scroll()
+{
+    if ( state.scroll.timer > 0 )
+    {
+        state.scroll.timer--;
+        return;
+    }
+
+    if ( state.scroll.offsetX == 0 && state.scroll.offsetY == 0 )
+    {
+        GotoEnter( state.scroll.scrollDir );
+        if ( IsOverworld() && state.scroll.nextRoomId == 0x0F )
+            Sound::PlayEffect( SEffect_secret );
+        return;
+    }
+
+    state.scroll.offsetX += state.scroll.speedX;
+    state.scroll.offsetY += state.scroll.speedY;
+
+    Limits playerLimits = Player::GetPlayerLimits();
+
+    if ( state.scroll.speedX != 0 )
+    {
+        int x = player->GetX() + state.scroll.speedX;
+        if ( x < playerLimits[1] )
+            x = playerLimits[1];
+        else if ( x > playerLimits[0] )
+            x = playerLimits[0];
+        player->SetX( x );
+    }
+    else
+    {
+        int y = player->GetY() + state.scroll.speedY;
+        if ( y < playerLimits[3] )
+            y = playerLimits[3];
+        else if ( y > playerLimits[2] )
+            y = playerLimits[2];
+        player->SetY( y );
+    }
+
+    player->GetAnimator()->Advance();
 }
 
 void World::DrawScroll()
@@ -4487,83 +4552,88 @@ void World::GotoEndLevel()
 
 void World::UpdateEndLevel()
 {
-    if ( state.endLevel.substate == EndLevelState::Start )
-    {
-        state.endLevel.substate = EndLevelState::Wait1;
-        state.endLevel.timer = EndLevelState::Wait1Time;
+    UpdateFunc update = sEndLevelFuncs[state.endLevel.substate];
+    (this->*update)();
+}
 
-        state.endLevel.left = 0;
-        state.endLevel.right = World::TileMapWidth;
+void World::UpdateEndLevel_Start()
+{
+    state.endLevel.substate = EndLevelState::Wait1;
+    state.endLevel.timer = EndLevelState::Wait1Time;
+
+    state.endLevel.left = 0;
+    state.endLevel.right = World::TileMapWidth;
+    state.endLevel.stepTimer = 4;
+
+    statusBar.EnableFeatures( StatusBar::Feature_Equipment, false );
+    Sound::PlaySong( Song_triforce, Sound::MainSongStream, false );
+}
+
+void World::UpdateEndLevel_Wait()
+{
+    if ( state.endLevel.timer == 0 )
+    {
+        if ( state.endLevel.substate == EndLevelState::Wait3 )
+            GotoLoadLevel( 0 );
+        else
+        {
+            state.endLevel.substate = (EndLevelState::Substate) (state.endLevel.substate + 1);
+            if ( state.endLevel.substate == EndLevelState::Flash )
+                state.endLevel.timer = EndLevelState::FlashTime;
+        }
+    }
+    else
+        state.endLevel.timer--;
+}
+
+void World::UpdateEndLevel_Flash()
+{
+    if ( state.endLevel.timer == 0 )
+        state.endLevel.substate = (EndLevelState::Substate) (state.endLevel.substate + 1);
+    else
+    {
+        int step = state.endLevel.timer & 0x7;
+        if ( step == 0 )
+            SetFlashPalette();
+        else if ( step == 3 )
+            SetLevelPalette();
+        state.endLevel.timer--;
+    }
+}
+
+void World::UpdateEndLevel_FillHearts()
+{
+    int maxHeartValue = profile.GetMaxHeartsValue();
+
+    Sound::PlayEffect( SEffect_character );
+
+    if ( profile.Hearts == maxHeartValue )
+    {
+        state.endLevel.substate = (EndLevelState::Substate) (state.endLevel.substate + 1);
+        state.endLevel.timer = EndLevelState::Wait2Time;
+    }
+    else
+    {
+        FillHearts( 6 );
+    }
+}
+
+void World::UpdateEndLevel_Furl()
+{
+    if ( state.endLevel.left == WorldMidX )
+    {
+        state.endLevel.substate = (EndLevelState::Substate) (state.endLevel.substate + 1);
+        state.endLevel.timer = EndLevelState::Wait3Time;
+    }
+    else if ( state.endLevel.stepTimer == 0 )
+    {
+        state.endLevel.left += 8;
+        state.endLevel.right -= 8;
         state.endLevel.stepTimer = 4;
-
-        statusBar.EnableFeatures( StatusBar::Feature_Equipment, false );
-        Sound::PlaySong( Song_triforce, Sound::MainSongStream, false );
     }
-    else if (  state.endLevel.substate == EndLevelState::Wait1
-            || state.endLevel.substate == EndLevelState::Wait2
-            || state.endLevel.substate == EndLevelState::Wait3 )
+    else
     {
-        if ( state.endLevel.timer == 0 )
-        {
-            if ( state.endLevel.substate == EndLevelState::Wait3 )
-                GotoLoadLevel( 0 );
-            else
-            {
-                state.endLevel.substate = (EndLevelState::Substate) (state.endLevel.substate + 1);
-                if ( state.endLevel.substate == EndLevelState::Flash )
-                    state.endLevel.timer = EndLevelState::FlashTime;
-            }
-        }
-        else
-            state.endLevel.timer--;
-    }
-    else if ( state.endLevel.substate == EndLevelState::Flash )
-    {
-        if ( state.endLevel.timer == 0 )
-            state.endLevel.substate = (EndLevelState::Substate) (state.endLevel.substate + 1);
-        else
-        {
-            int step = state.endLevel.timer & 0x7;
-            if ( step == 0 )
-                SetFlashPalette();
-            else if ( step == 3 )
-                SetLevelPalette();
-            state.endLevel.timer--;
-        }
-    }
-    else if ( state.endLevel.substate == EndLevelState::FillHearts )
-    {
-        int maxHeartValue = profile.GetMaxHeartsValue();
-
-        Sound::PlayEffect( SEffect_character );
-
-        if ( profile.Hearts == maxHeartValue )
-        {
-            state.endLevel.substate = (EndLevelState::Substate) (state.endLevel.substate + 1);
-            state.endLevel.timer = EndLevelState::Wait2Time;
-        }
-        else
-        {
-            FillHearts( 6 );
-        }
-    }
-    else if ( state.endLevel.substate == EndLevelState::Furl )
-    {
-        if ( state.endLevel.left == WorldMidX )
-        {
-            state.endLevel.substate = (EndLevelState::Substate) (state.endLevel.substate + 1);
-            state.endLevel.timer = EndLevelState::Wait3Time;
-        }
-        else if ( state.endLevel.stepTimer == 0 )
-        {
-            state.endLevel.left += 8;
-            state.endLevel.right -= 8;
-            state.endLevel.stepTimer = 4;
-        }
-        else
-        {
-            state.endLevel.stepTimer--;
-        }
+        state.endLevel.stepTimer--;
     }
 }
 
@@ -4609,185 +4679,197 @@ void World::GotoWinGame()
 
 void World::UpdateWinGame()
 {
-    if ( state.winGame.substate == WinGameState::Start )
-    {
-        if ( state.winGame.timer > 0 )
-        {
-            state.winGame.timer--;
-        }
-        else if ( state.winGame.left == WorldMidX )
-        {
-            state.winGame.substate = WinGameState::Text1;
-            statusBar.EnableFeatures( StatusBar::Feature_EquipmentAndMap, false );
+    UpdateFunc update = sWinGameFuncs[state.winGame.substate];
+    (this->*update)();
+}
 
-            // A959
-            const static uint8_t str1[] = {
-        0x1d, 0x11, 0x0a, 0x17, 0x14, 0x1c, 0x24, 0x15, 0x12, 0x17, 0x14, 0x28, 0x22, 0x18, 0x1e, 0x2a,
-        0x1b, 0x8e, 0x64, 0x1d, 0x11, 0x0e, 0x24, 0x11, 0x0e, 0x1b, 0x18, 0x24, 0x18, 0x0f, 0x24, 0x11,
-        0x22, 0x1b, 0x1e, 0x15, 0x0e, 0xec
-            };
-            textBox1 = new TextBox( str1 );
-        }
-        else if ( state.winGame.stepTimer == 0 )
-        {
-            state.winGame.left += 8;
-            state.winGame.right -= 8;
-            state.winGame.stepTimer = 4;
-        }
-        else
-        {
-            state.winGame.stepTimer--;
-        }
-    }
-    else if ( state.winGame.substate == WinGameState::Text1 )
-    {
-        textBox1->Update();
-        if ( textBox1->IsDone() )
-        {
-            state.winGame.substate = WinGameState::Stand;
-            state.winGame.timer = 76;
-        }
-    }
-    else if ( state.winGame.substate == WinGameState::Stand )
+void World::UpdateWinGame_Start()
+{
+    if ( state.winGame.timer > 0 )
     {
         state.winGame.timer--;
-        if ( state.winGame.timer == 0 )
-        {
-            state.winGame.substate = WinGameState::Hold1;
-            state.winGame.timer = 64;
-        }
     }
-    else if ( state.winGame.substate == WinGameState::Hold1 )
+    else if ( state.winGame.left == WorldMidX )
     {
-        state.winGame.npcVisual = WinGameState::Npc_Lift;
-        state.winGame.timer--;
-        if ( state.winGame.timer == 0 )
-        {
-            state.winGame.substate = WinGameState::Colors;
-            state.winGame.timer = 127;
-        }
-    }
-    else if ( state.winGame.substate == WinGameState::Colors )
-    {
-        state.winGame.timer--;
-        if ( state.winGame.timer == 0 )
-        {
-            state.winGame.substate = WinGameState::Hold2;
-            state.winGame.timer = 131;
-            Sound::PlaySong( Song_ending, Sound::MainSongStream, true );
-        }
-    }
-    else if ( state.winGame.substate == WinGameState::Hold2 )
-    {
-        state.winGame.timer--;
-        if ( state.winGame.timer == 0 )
-        {
-            // AB07
-            const static uint8_t str2[] = {
-        0x25, 0x25, 0x25, 0x25, 0x25, 0x25, 0x25, 0x25, 
-        0x0f, 0x12, 0x17, 0x0a, 0x15, 0x15, 0x22, 0x28, 
-        0xa5, 0x65,
-        0x19, 0x0e, 0x0a, 0x0c, 0x0e, 0x24, 0x1b, 0x0e,
-        0x1d, 0x1e, 0x1b, 0x17, 0x1c, 0x24, 0x1d, 0x18, 0x24, 0x11, 0x22, 0x1b, 0x1e, 0x15, 0x0e, 0x2c,
-        0xa5, 0x65, 0x65, 0x25, 0x25,
-        0x1d, 0x11, 0x12, 0x1c, 0x24, 0x0e, 0x17, 0x0d, 0x1c, 0x24, 0x1d, 0x11, 0x0e, 0x24, 0x1c, 0x1d,
-        0x18, 0x1b, 0x22, 0x2c, 0xe5
-            };
+        state.winGame.substate = WinGameState::Text1;
+        statusBar.EnableFeatures( StatusBar::Feature_EquipmentAndMap, false );
 
-            state.winGame.substate = WinGameState::Text2;
-            textBox2 = new TextBox( str2, 8 );
-            textBox2->SetY( WinGameState::TextBox2Top );
-        }
+        // A959
+        const static uint8_t str1[] = {
+    0x1d, 0x11, 0x0a, 0x17, 0x14, 0x1c, 0x24, 0x15, 0x12, 0x17, 0x14, 0x28, 0x22, 0x18, 0x1e, 0x2a,
+    0x1b, 0x8e, 0x64, 0x1d, 0x11, 0x0e, 0x24, 0x11, 0x0e, 0x1b, 0x18, 0x24, 0x18, 0x0f, 0x24, 0x11,
+    0x22, 0x1b, 0x1e, 0x15, 0x0e, 0xec
+        };
+        textBox1 = new TextBox( str1 );
     }
-    else if ( state.winGame.substate == WinGameState::Text2 )
+    else if ( state.winGame.stepTimer == 0 )
     {
-        textBox2->Update();
-        if ( textBox2->IsDone() )
-        {
-            state.winGame.substate = WinGameState::Hold3;
-            state.winGame.timer = 129;
-        }
+        state.winGame.left += 8;
+        state.winGame.right -= 8;
+        state.winGame.stepTimer = 4;
     }
-    else if ( state.winGame.substate == WinGameState::Hold3 )
+    else
     {
-        state.winGame.timer--;
-        if ( state.winGame.timer == 0 )
-        {
-            state.winGame.substate = WinGameState::NoObjects;
-            state.winGame.timer = 32;
-        }
+        state.winGame.stepTimer--;
     }
-    else if ( state.winGame.substate == WinGameState::NoObjects )
-    {
-        state.winGame.npcVisual = WinGameState::Npc_None;
-        state.winGame.timer--;
-        if ( state.winGame.timer == 0 )
-        {
-            credits = new Credits();
-            state.winGame.substate = WinGameState::Credits;
-        }
-    }
-    else if ( state.winGame.substate == WinGameState::Credits )
-    {
-        TextBox** boxes[] = { &textBox1, &textBox2 };
-        int startYs[] = { TextBox::StartY, WinGameState::TextBox2Top };
+}
 
-        for ( int i = 0; i < _countof( boxes ); i++ )
+void World::UpdateWinGame_Text1()
+{
+    textBox1->Update();
+    if ( textBox1->IsDone() )
+    {
+        state.winGame.substate = WinGameState::Stand;
+        state.winGame.timer = 76;
+    }
+}
+
+void World::UpdateWinGame_Stand()
+{
+    state.winGame.timer--;
+    if ( state.winGame.timer == 0 )
+    {
+        state.winGame.substate = WinGameState::Hold1;
+        state.winGame.timer = 64;
+    }
+}
+
+void World::UpdateWinGame_Hold1()
+{
+    state.winGame.npcVisual = WinGameState::Npc_Lift;
+    state.winGame.timer--;
+    if ( state.winGame.timer == 0 )
+    {
+        state.winGame.substate = WinGameState::Colors;
+        state.winGame.timer = 127;
+    }
+}
+
+void World::UpdateWinGame_Colors()
+{
+    state.winGame.timer--;
+    if ( state.winGame.timer == 0 )
+    {
+        state.winGame.substate = WinGameState::Hold2;
+        state.winGame.timer = 131;
+        Sound::PlaySong( Song_ending, Sound::MainSongStream, true );
+    }
+}
+
+void World::UpdateWinGame_Hold2()
+{
+    state.winGame.timer--;
+    if ( state.winGame.timer == 0 )
+    {
+        // AB07
+        const static uint8_t str2[] = {
+    0x25, 0x25, 0x25, 0x25, 0x25, 0x25, 0x25, 0x25, 
+    0x0f, 0x12, 0x17, 0x0a, 0x15, 0x15, 0x22, 0x28, 
+    0xa5, 0x65,
+    0x19, 0x0e, 0x0a, 0x0c, 0x0e, 0x24, 0x1b, 0x0e,
+    0x1d, 0x1e, 0x1b, 0x17, 0x1c, 0x24, 0x1d, 0x18, 0x24, 0x11, 0x22, 0x1b, 0x1e, 0x15, 0x0e, 0x2c,
+    0xa5, 0x65, 0x65, 0x25, 0x25,
+    0x1d, 0x11, 0x12, 0x1c, 0x24, 0x0e, 0x17, 0x0d, 0x1c, 0x24, 0x1d, 0x11, 0x0e, 0x24, 0x1c, 0x1d,
+    0x18, 0x1b, 0x22, 0x2c, 0xe5
+        };
+
+        state.winGame.substate = WinGameState::Text2;
+        textBox2 = new TextBox( str2, 8 );
+        textBox2->SetY( WinGameState::TextBox2Top );
+    }
+}
+
+void World::UpdateWinGame_Text2()
+{
+    textBox2->Update();
+    if ( textBox2->IsDone() )
+    {
+        state.winGame.substate = WinGameState::Hold3;
+        state.winGame.timer = 129;
+    }
+}
+
+void World::UpdateWinGame_Hold3()
+{
+    state.winGame.timer--;
+    if ( state.winGame.timer == 0 )
+    {
+        state.winGame.substate = WinGameState::NoObjects;
+        state.winGame.timer = 32;
+    }
+}
+
+void World::UpdateWinGame_NoObjects()
+{
+    state.winGame.npcVisual = WinGameState::Npc_None;
+    state.winGame.timer--;
+    if ( state.winGame.timer == 0 )
+    {
+        credits = new Credits();
+        state.winGame.substate = WinGameState::Credits;
+    }
+}
+
+void World::UpdateWinGame_Credits()
+{
+    TextBox** boxes[] = { &textBox1, &textBox2 };
+    int startYs[] = { TextBox::StartY, WinGameState::TextBox2Top };
+
+    for ( int i = 0; i < _countof( boxes ); i++ )
+    {
+        TextBox* box = *boxes[i];
+        if ( box != nullptr )
         {
-            TextBox* box = *boxes[i];
-            if ( box != nullptr )
+            int textToCreditsY = Credits::StartY - startYs[i];
+            box->SetY( credits->GetTop() - textToCreditsY );
+            int bottom = box->GetY() + box->GetHeight();
+            if ( bottom <= 0 )
             {
-                int textToCreditsY = Credits::StartY - startYs[i];
-                box->SetY( credits->GetTop() - textToCreditsY );
-                int bottom = box->GetY() + box->GetHeight();
-                if ( bottom <= 0 )
-                {
-                    delete box;
-                    *boxes[i] = nullptr;
-                }
+                delete box;
+                *boxes[i] = nullptr;
             }
         }
+    }
 
-        credits->Update();
-        if ( credits->IsDone() )
+    credits->Update();
+    if ( credits->IsDone() )
+    {
+        if ( Input::IsButtonPressing( InputButtons::Start ) )
         {
-            if ( Input::IsButtonPressing( InputButtons::Start ) )
-            {
-                delete credits;
-                credits = nullptr;
-                delete player;
-                player = nullptr;
-                DeleteObjects();
-                submenuOffsetY = 0;
-                statusBarVisible = false;
-                statusBar.EnableFeatures( StatusBar::Feature_All, true );
+            delete credits;
+            credits = nullptr;
+            delete player;
+            player = nullptr;
+            DeleteObjects();
+            submenuOffsetY = 0;
+            statusBarVisible = false;
+            statusBar.EnableFeatures( StatusBar::Feature_All, true );
 
-                uint8_t name[MaxNameLength];
-                uint8_t nameLength = profile.NameLength;
-                uint8_t deaths = profile.Deaths;
-                memcpy( name, profile.Name, nameLength );
-                memset( &profile, 0, sizeof profile );
-                memcpy( profile.Name, name, nameLength );
-                profile.NameLength = nameLength;
-                profile.Deaths = deaths;
-                profile.Quest = 1;
-                profile.Items[ItemSlot_HeartContainers] = DefaultHearts;
-                profile.Items[ItemSlot_MaxBombs] = DefaultBombs;
-                SaveFolder::WriteProfile( profileSlot, profile );
+            uint8_t name[MaxNameLength];
+            uint8_t nameLength = profile.NameLength;
+            uint8_t deaths = profile.Deaths;
+            memcpy( name, profile.Name, nameLength );
+            memset( &profile, 0, sizeof profile );
+            memcpy( profile.Name, name, nameLength );
+            profile.NameLength = nameLength;
+            profile.Deaths = deaths;
+            profile.Quest = 1;
+            profile.Items[ItemSlot_HeartContainers] = DefaultHearts;
+            profile.Items[ItemSlot_MaxBombs] = DefaultBombs;
+            SaveFolder::WriteProfile( profileSlot, profile );
 
-                Sound::StopAll();
-                GotoFileMenu();
-            }
+            Sound::StopAll();
+            GotoFileMenu();
         }
+    }
+    else
+    {
+        int statusTop = credits->GetTop() - Credits::StartY;
+        int statusBottom = statusTop + StatusBar::StatusBarHeight;
+        if ( statusBottom > 0 )
+            submenuOffsetY = statusTop;
         else
-        {
-            int statusTop = credits->GetTop() - Credits::StartY;
-            int statusBottom = statusTop + StatusBar::StatusBarHeight;
-            if ( statusBottom > 0 )
-                submenuOffsetY = statusTop;
-            else
-                submenuOffsetY = -StatusBar::StatusBarHeight;
-        }
+            submenuOffsetY = -StatusBar::StatusBarHeight;
     }
 }
 
@@ -5044,110 +5126,119 @@ void World::GotoLeaveCellar()
 
 void World::UpdateLeaveCellar()
 {
-    if ( state.leaveCellar.substate == LeaveCellarState::Start )
-    {
-        if ( IsOverworld() )
-        {
-            state.leaveCellar.substate = LeaveCellarState::Wait;
-            state.leaveCellar.timer = 29;
-        }
-        else
-        {
-            state.leaveCellar.substate = LeaveCellarState::FadeOut;
-            state.leaveCellar.fadeTimer = 11;
-            state.leaveCellar.fadeStep = 0;
-        }
-    }
-    else if ( state.leaveCellar.substate == LeaveCellarState::FadeOut )
-    {
-        if ( state.leaveCellar.fadeTimer == 0 )
-        {
-            for ( int i = 0; i < LevelInfoBlock::FadePals; i++ )
-            {
-                int step = state.leaveCellar.fadeStep;
-                Graphics::SetPaletteIndexed( i + 2, infoBlock.InCellarPaletteSeq[step][i] );
-            }
-            Graphics::UpdatePalettes();
-            state.leaveCellar.fadeTimer = 9;
-            state.leaveCellar.fadeStep++;
+    UpdateFunc update = sLeaveCellarFuncs[state.leaveCellar.substate];
+    (this->*update)();
+}
 
-            if ( state.leaveCellar.fadeStep == LevelInfoBlock::FadeLength )
-                state.leaveCellar.substate = LeaveCellarState::LoadRoom;
-        }
-        else
-        {
-            state.leaveCellar.fadeTimer--;
-        }
-    }
-    else if ( state.leaveCellar.substate == LeaveCellarState::LoadRoom )
+void World::UpdateLeaveCellar_Start()
+{
+    if ( IsOverworld() )
     {
-        UWRoomAttrs& uwRoomAttrs = (UWRoomAttrs&) roomAttrs[curRoomId];
-        int nextRoomId;
-
-        if ( player->GetX() < 0x80 )
-            nextRoomId = uwRoomAttrs.GetLeftCellarExitRoomId();
-        else
-            nextRoomId = uwRoomAttrs.GetRightCellarExitRoomId();
-
-        LoadRoom( nextRoomId, 0 );
-
-        player->SetX( 0x60 );
-        player->SetY( 0xA0 );
-        player->SetFacing( Dir_Down );
-
-        state.leaveCellar.substate = LeaveCellarState::FadeIn;
-        state.leaveCellar.fadeTimer = 35;
-        state.leaveCellar.fadeStep = 3;
+        state.leaveCellar.substate = LeaveCellarState::Wait;
+        state.leaveCellar.timer = 29;
     }
-    else if ( state.leaveCellar.substate == LeaveCellarState::FadeIn )
+    else
     {
-        if ( state.leaveCellar.fadeTimer == 0 )
-        {
-            for ( int i = 0; i < LevelInfoBlock::FadePals; i++ )
-            {
-                int step = state.leaveCellar.fadeStep;
-                Graphics::SetPaletteIndexed( i + 2, infoBlock.OutOfCellarPaletteSeq[step][i] );
-            }
-            Graphics::UpdatePalettes();
-            state.leaveCellar.fadeTimer = 9;
-            state.leaveCellar.fadeStep--;
+        state.leaveCellar.substate = LeaveCellarState::FadeOut;
+        state.leaveCellar.fadeTimer = 11;
+        state.leaveCellar.fadeStep = 0;
+    }
+}
 
-            if ( state.leaveCellar.fadeStep < 0 )
-                state.leaveCellar.substate = LeaveCellarState::Walk;
-        }
-        else
-        {
-            state.leaveCellar.fadeTimer--;
-        }
-    }
-    else if ( state.leaveCellar.substate == LeaveCellarState::Walk )
+void World::UpdateLeaveCellar_FadeOut()
+{
+    if ( state.leaveCellar.fadeTimer == 0 )
     {
-        GotoEnter( Dir_None );
-    }
-    else if ( state.leaveCellar.substate == LeaveCellarState::Wait )
-    {
-        if ( state.leaveCellar.timer == 0 )
+        for ( int i = 0; i < LevelInfoBlock::FadePals; i++ )
         {
-            state.leaveCellar.substate = LeaveCellarState::LoadOverworldRoom;
-        }
-        else
-        {
-            state.leaveCellar.timer--;
-        }
-    }
-    else if ( state.leaveCellar.substate == LeaveCellarState::LoadOverworldRoom )
-    {
-        for ( int i = 0; i < 2; i++ )
-        {
-            Graphics::SetPaletteIndexed( i + 2, infoBlock.Palettes[i + 2] );
+            int step = state.leaveCellar.fadeStep;
+            Graphics::SetPaletteIndexed( i + 2, infoBlock.InCellarPaletteSeq[step][i] );
         }
         Graphics::UpdatePalettes();
+        state.leaveCellar.fadeTimer = 9;
+        state.leaveCellar.fadeStep++;
 
-        LoadRoom( curRoomId, 0 );
-        SetPlayerExitPosOW( curRoomId );
-        GotoEnter( Dir_None );
-        player->SetFacing( Dir_Down );
+        if ( state.leaveCellar.fadeStep == LevelInfoBlock::FadeLength )
+            state.leaveCellar.substate = LeaveCellarState::LoadRoom;
     }
+    else
+    {
+        state.leaveCellar.fadeTimer--;
+    }
+}
+
+void World::UpdateLeaveCellar_LoadRoom()
+{
+    UWRoomAttrs& uwRoomAttrs = (UWRoomAttrs&) roomAttrs[curRoomId];
+    int nextRoomId;
+
+    if ( player->GetX() < 0x80 )
+        nextRoomId = uwRoomAttrs.GetLeftCellarExitRoomId();
+    else
+        nextRoomId = uwRoomAttrs.GetRightCellarExitRoomId();
+
+    LoadRoom( nextRoomId, 0 );
+
+    player->SetX( 0x60 );
+    player->SetY( 0xA0 );
+    player->SetFacing( Dir_Down );
+
+    state.leaveCellar.substate = LeaveCellarState::FadeIn;
+    state.leaveCellar.fadeTimer = 35;
+    state.leaveCellar.fadeStep = 3;
+}
+
+void World::UpdateLeaveCellar_FadeIn()
+{
+    if ( state.leaveCellar.fadeTimer == 0 )
+    {
+        for ( int i = 0; i < LevelInfoBlock::FadePals; i++ )
+        {
+            int step = state.leaveCellar.fadeStep;
+            Graphics::SetPaletteIndexed( i + 2, infoBlock.OutOfCellarPaletteSeq[step][i] );
+        }
+        Graphics::UpdatePalettes();
+        state.leaveCellar.fadeTimer = 9;
+        state.leaveCellar.fadeStep--;
+
+        if ( state.leaveCellar.fadeStep < 0 )
+            state.leaveCellar.substate = LeaveCellarState::Walk;
+    }
+    else
+    {
+        state.leaveCellar.fadeTimer--;
+    }
+}
+
+void World::UpdateLeaveCellar_Walk()
+{
+    GotoEnter( Dir_None );
+}
+
+void World::UpdateLeaveCellar_Wait()
+{
+    if ( state.leaveCellar.timer == 0 )
+    {
+        state.leaveCellar.substate = LeaveCellarState::LoadOverworldRoom;
+    }
+    else
+    {
+        state.leaveCellar.timer--;
+    }
+}
+
+void World::UpdateLeaveCellar_LoadOverworldRoom()
+{
+    for ( int i = 0; i < 2; i++ )
+    {
+        Graphics::SetPaletteIndexed( i + 2, infoBlock.Palettes[i + 2] );
+    }
+    Graphics::UpdatePalettes();
+
+    LoadRoom( curRoomId, 0 );
+    SetPlayerExitPosOW( curRoomId );
+    GotoEnter( Dir_None );
+    player->SetFacing( Dir_Down );
 }
 
 void World::DrawLeaveCellar()
@@ -5256,137 +5347,148 @@ void World::UpdateDie()
     if ( state.death.timer > 0 )
         state.death.timer--;
 
-    if ( state.death.substate == DeathState::Start )
-    {
-        player->SetInvincibilityTimer( 0x10 );
-        state.death.timer = 0x20;
-        state.death.substate = DeathState::Flash;
-        Sound::StopEffects();
-        Sound::PlaySong( Song_death, Sound::MainSongStream, false );
-    }
-    else if ( state.death.substate == DeathState::Flash )
-    {
-        player->DecInvincibleTimer();
+    UpdateFunc update = sDeathFuncs[state.death.substate];
+    (this->*update)();
+}
 
+void World::UpdateDie_Start()
+{
+    player->SetInvincibilityTimer( 0x10 );
+    state.death.timer = 0x20;
+    state.death.substate = DeathState::Flash;
+    Sound::StopEffects();
+    Sound::PlaySong( Song_death, Sound::MainSongStream, false );
+}
+
+void World::UpdateDie_Flash()
+{
+    player->DecInvincibleTimer();
+
+    if ( state.death.timer == 0 )
+    {
+        state.death.timer = 6;
+        state.death.substate = DeathState::Wait1;
+    }
+}
+
+void World::UpdateDie_Wait1()
+{
+    // TODO: the last 2 frames make the whole play area use palette 3.
+
+    if ( state.death.timer == 0 )
+    {
+        static const uint8_t redPals[2][4] = 
+        {
+            { 0x0F, 0x17, 0x16, 0x26 },
+            { 0x0F, 0x17, 0x16, 0x26 }
+        };
+
+        SetLevelPalettes( redPals );
+
+        state.death.step = 16;
+        state.death.timer = 0;
+        state.death.substate = DeathState::Turn;
+    }
+}
+
+void World::UpdateDie_Turn()
+{
+    if ( state.death.step == 0 )
+    {
+        state.death.step = 4;
+        state.death.timer = 0;
+        state.death.substate = DeathState::Fade;
+    }
+    else
+    {
         if ( state.death.timer == 0 )
         {
-            state.death.timer = 6;
-            state.death.substate = DeathState::Wait1;
-        }
-    }
-    else if ( state.death.substate == DeathState::Wait1 )
-    {
-        // TODO: the last 2 frames make the whole play area use palette 3.
+            state.death.timer = 5;
+            state.death.step--;
 
-        if ( state.death.timer == 0 )
-        {
-            static const uint8_t redPals[2][4] = 
+            static const Direction dirs[] = 
             {
-                { 0x0F, 0x17, 0x16, 0x26 },
-                { 0x0F, 0x17, 0x16, 0x26 }
+                Dir_Down,
+                Dir_Left,
+                Dir_Up,
+                Dir_Right,
             };
 
-            SetLevelPalettes( redPals );
-
-            state.death.step = 16;
-            state.death.timer = 0;
-            state.death.substate = DeathState::Turn;
+            Direction dir = dirs[state.death.step & 3];
+            player->SetFacing( dir );
         }
     }
-    else if ( state.death.substate == DeathState::Turn )
+}
+
+void World::UpdateDie_Fade()
+{
+    if ( state.death.step == 0 )
+    {
+        state.death.substate = DeathState::GrayLink;
+    }
+    else
+    {
+        if ( state.death.timer == 0 )
+        {
+            state.death.timer = 10;
+            state.death.step--;
+
+            int seq = 3 - state.death.step;
+
+            SetLevelPalettes( infoBlock.DeathPaletteSeq[seq] );
+        }
+    }
+}
+
+void World::UpdateDie_GrayLink()
+{
+    static const uint8_t grayPal[4] = { 0, 0x10, 0x30, 0 };
+
+    Graphics::SetPaletteIndexed( PlayerPalette, grayPal );
+    Graphics::UpdatePalettes();
+
+    state.death.substate = DeathState::Spark;
+    state.death.timer = 0x18;
+    state.death.step = 0;
+}
+
+void World::UpdateDie_Spark()
+{
+    if ( state.death.timer == 0 )
     {
         if ( state.death.step == 0 )
         {
-            state.death.step = 4;
-            state.death.timer = 0;
-            state.death.substate = DeathState::Fade;
+            state.death.timer = 10;
+            Sound::PlayEffect( SEffect_character );
+        }
+        else if ( state.death.step == 1 )
+        {
+            state.death.timer = 4;
         }
         else
         {
-            if ( state.death.timer == 0 )
-            {
-                state.death.timer = 5;
-                state.death.step--;
-
-                static const Direction dirs[] = 
-                {
-                    Dir_Down,
-                    Dir_Left,
-                    Dir_Up,
-                    Dir_Right,
-                };
-
-                Direction dir = dirs[state.death.step & 3];
-                player->SetFacing( dir );
-            }
+            state.death.substate = DeathState::Wait2;
+            state.death.timer = 46;
         }
+        state.death.step++;
     }
-    else if ( state.death.substate == DeathState::Fade )
-    {
-        if ( state.death.step == 0 )
-        {
-            state.death.substate = DeathState::GrayLink;
-        }
-        else
-        {
-            if ( state.death.timer == 0 )
-            {
-                state.death.timer = 10;
-                state.death.step--;
+}
 
-                int seq = 3 - state.death.step;
+void World::UpdateDie_Wait2()
+{
+    if ( state.death.timer == 0 )
+    {
+        state.death.substate = DeathState::GameOver;
+        state.death.timer = 0x60;
+    }
+}
 
-                SetLevelPalettes( infoBlock.DeathPaletteSeq[seq] );
-            }
-        }
-    }
-    else if ( state.death.substate == DeathState::GrayLink )
+void World::UpdateDie_GameOver()
+{
+    if ( state.death.timer == 0 )
     {
-        static const uint8_t grayPal[4] = { 0, 0x10, 0x30, 0 };
-
-        Graphics::SetPaletteIndexed( PlayerPalette, grayPal );
-        Graphics::UpdatePalettes();
-
-        state.death.substate = DeathState::Spark;
-        state.death.timer = 0x18;
-        state.death.step = 0;
-    }
-    else if ( state.death.substate == DeathState::Spark )
-    {
-        if ( state.death.timer == 0 )
-        {
-            if ( state.death.step == 0 )
-            {
-                state.death.timer = 10;
-                Sound::PlayEffect( SEffect_character );
-            }
-            else if ( state.death.step == 1 )
-            {
-                state.death.timer = 4;
-            }
-            else
-            {
-                state.death.substate = DeathState::Wait2;
-                state.death.timer = 46;
-            }
-            state.death.step++;
-        }
-    }
-    else if ( state.death.substate == DeathState::Wait2 )
-    {
-        if ( state.death.timer == 0 )
-        {
-            state.death.substate = DeathState::GameOver;
-            state.death.timer = 0x60;
-        }
-    }
-    else if ( state.death.substate == DeathState::GameOver )
-    {
-        if ( state.death.timer == 0 )
-        {
-            profile.Deaths++;
-            GotoContinueQuestion();
-        }
+        profile.Deaths++;
+        GotoContinueQuestion();
     }
 }
 
