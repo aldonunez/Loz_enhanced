@@ -126,14 +126,14 @@ void StatusBar::Draw( int baseY, ALLEGRO_COLOR backColor )
 
 void StatusBar::DrawMiniMap( int baseY )
 {
-    int roomId = World::Get()->GetRoomId();
+    int roomId = World::GetRoomId();
     int row = (roomId >> 4) & 0xF;
     int col = roomId & 0xF;
     int cursorX = MiniMapX;
     int cursorY = MiniMapY + baseY;
     bool showCursor = true;
 
-    if ( World::Get()->IsOverworld() )
+    if ( World::IsOverworld() )
     {
         DrawOWMiniMap( baseY );
 
@@ -143,7 +143,7 @@ void StatusBar::DrawMiniMap( int baseY )
     else
     {
         uint8_t levelStr[] = { 0x15, 0x0E, 0x1F, 0x0E, 0x15, 0x62, 0 };
-        const World::LevelInfoBlock* levelInfo = World::Get()->GetLevelInfo();
+        const World::LevelInfoBlock* levelInfo = World::GetLevelInfo();
 
         levelStr[6] = levelInfo->LevelNumber;
         DrawString( levelStr, _countof( levelStr ), LevelNameX, baseY + LevelNameY, 0 );
@@ -155,7 +155,7 @@ void StatusBar::DrawMiniMap( int baseY )
         cursorX += col * UWMapTileWidth + 2;
         cursorY += row * UWMapTileHeight;
 
-        if ( !World::Get()->IsUWMain( roomId ) )
+        if ( !World::IsUWMain( roomId ) )
             showCursor = false;
 
         if ( (features & Feature_MapCursors) != 0
@@ -170,7 +170,7 @@ void StatusBar::DrawMiniMap( int baseY )
             int triforceY = MiniMapY + baseY + triforceRow * UWMapTileHeight;
             int palette = LevelFgPalette;
 
-            if ( !World::Get()->GotItem( triforceRoomId ) )
+            if ( !World::GotItem( triforceRoomId ) )
             {
                 if ( (GetFrameCounter() & 0x10) == 0 )
                     palette = RedFgPalette;
@@ -213,7 +213,7 @@ void StatusBar::DrawUWMiniMap( int baseY )
     if ( !World::HasCurrentMap() )
         return;
 
-    const World::LevelInfoBlock* levelInfo = World::Get()->GetLevelInfo();
+    const World::LevelInfoBlock* levelInfo = World::GetLevelInfo();
 
     int x = MiniMapX;
 

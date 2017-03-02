@@ -510,7 +510,7 @@ void Tree::Update()
             continue;
 
         World::SetTile( x, y, Tile_Stairs );
-        World::Get()->TakeSecret();
+        World::TakeSecret();
         Sound::PlayEffect( SEffect_secret );
         isDeleted = true;
         break;
@@ -685,7 +685,7 @@ void RockWall::Update()
             continue;
 
         World::SetTile( x, y, Tile_Cave );
-        World::Get()->TakeSecret();
+        World::TakeSecret();
         Sound::PlayEffect( SEffect_secret );
         isDeleted = true;
         return;
@@ -1496,7 +1496,7 @@ void MagicWave::UpdateFlying()
 {
     if ( Dir_None == CheckWorldMargin( facing ) )
     {
-        if ( IsPlayerWeapon() && !World::Get()->IsOverworld() )
+        if ( IsPlayerWeapon() && !World::IsOverworld() )
             AddFire();
 
         DeleteShot();
@@ -1710,21 +1710,21 @@ Person::Person( ObjType type, int x, int y, const CaveSpec* spec )
 
     int stringId = spec->GetStringId();
 
-    if ( stringId == String_DoorRepair && World::Get()->GotItem() )
+    if ( stringId == String_DoorRepair && World::GotItem() )
     {
         isDeleted = true;
         return;
     }
 
-    if ( stringId == String_MoneyOrLife && World::Get()->GotItem() )
+    if ( stringId == String_MoneyOrLife && World::GotItem() )
     {
-        World::Get()->OpenShutters();
+        World::OpenShutters();
         World::SetPersonWallY( 0 );
         isDeleted = true;
         return;
     }
 
-    if ( type == Obj_Grumble && World::Get()->GotItem() )
+    if ( type == Obj_Grumble && World::GotItem() )
     {
         World::SetPersonWallY( 0 );
         isDeleted = true;
@@ -1735,7 +1735,7 @@ Person::Person( ObjType type, int x, int y, const CaveSpec* spec )
     {
         if ( World::GetItem( ItemSlot_TriforcePieces ) == 0xFF )
         {
-            World::Get()->OpenShutters();
+            World::OpenShutters();
             World::SetPersonWallY( 0 );
             isDeleted = true;
             return;
@@ -1744,7 +1744,7 @@ Person::Person( ObjType type, int x, int y, const CaveSpec* spec )
 
     if ( spec->GetPickUp() && !spec->GetShowPrices() )
     {
-        if ( World::Get()->GotItem() )
+        if ( World::GotItem() )
         {
             isDeleted = true;
             return;
@@ -1841,7 +1841,7 @@ void Person::UpdateDialog()
         if ( spec.GetStringId() == String_DoorRepair )
         {
             World::PostRupeeLoss( 20 );
-            World::Get()->MarkItem();
+            World::MarkItem();
         }
         else if ( GetType() == Obj_Grumble )
         {
@@ -1906,7 +1906,7 @@ void Person::HandlePlayerHit( int index )
     }
 
     if ( !spec.GetShowPrices() )
-        World::Get()->MarkItem();
+        World::MarkItem();
 
     if ( spec.GetHint() )
         HandlePickUpHint( index );
@@ -1923,7 +1923,7 @@ void Person::HandlePickUpItem( int index )
     chosenIndex = index;
     state = PickedUp;
     objTimer = 0x40;
-    World::Get()->LiftItem( itemId );
+    World::LiftItem( itemId );
     Sound::PushSong( Song_item_lift );
     spec.ClearShowPrices();
 }
@@ -2018,8 +2018,8 @@ void Person::HandlePickUpSpecial( int index )
             return;
         }
 
-        World::Get()->MarkItem();
-        World::Get()->OpenShutters();
+        World::MarkItem();
+        World::OpenShutters();
 
         showNumbers = false;
         state = PickedUp;
@@ -2030,7 +2030,7 @@ void Person::HandlePickUpSpecial( int index )
         uint8_t amount = spec.Prices[index];
 
         World::PostRupeeWin( amount );
-        World::Get()->MarkItem();
+        World::MarkItem();
         spec.ClearPickUp();
         showNumbers = true;
     }
@@ -2061,7 +2061,7 @@ void Person::UpdatePickUp()
 
         if ( GetType() == Obj_Grumble )
         {
-            World::Get()->MarkItem();
+            World::MarkItem();
             World::SetItem( ItemSlot_Food, 0 );
             World::SetPersonWallY( 0 );
 
@@ -2244,7 +2244,7 @@ void ItemObj::Update()
     if ( touchedItem )
     {
         if ( isRoomItem )
-            World::Get()->MarkItem();
+            World::MarkItem();
 
         isDeleted = true;
 
@@ -2263,7 +2263,7 @@ void ItemObj::Update()
             }
             else if ( World::IsUWCellar() )
             {
-                World::Get()->LiftItem( itemId );
+                World::LiftItem( itemId );
                 Sound::PushSong( Song_item_lift );
             }
         }
@@ -2309,14 +2309,14 @@ void Food::Update()
     }
 
     // This is how food attracts some monsters.
-    int roomObjId = World::Get()->GetRoomObjId();
+    int roomObjId = World::GetRoomObjId();
 
     if ( (roomObjId >= Obj_BlueMoblin && roomObjId <= Obj_BlueFastOctorock)
         || roomObjId == Obj_Vire
         || roomObjId == Obj_BlueKeese
         || roomObjId == Obj_RedKeese )
     {
-        World::Get()->SetObservedPlayerPos( objX, objY );
+        World::SetObservedPlayerPos( objX, objY );
     }
 }
 

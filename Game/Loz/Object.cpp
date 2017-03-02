@@ -69,7 +69,7 @@ Object::Object( ObjType type )
         objTimer = time;
     }
 
-    hp = World::Get()->GetObjectMaxHP( type );
+    hp = World::GetObjectMaxHP( type );
 }
 
 Object::~Object()
@@ -210,7 +210,7 @@ bool Object::DecoratedUpdate()
         if ( decoration == 0 )
         {
             int slot = World::GetCurrentObjectSlot();
-            ObjectAttr attrs = World::Get()->GetObjectAttrs( GetType() );
+            ObjectAttr attrs = World::GetObjectAttrs( GetType() );
 
             if ( slot < BufferSlot && !attrs.GetCustomCollision() )
             {
@@ -288,7 +288,7 @@ bool Object::IsStunned()
 
 bool Object::CheckCollisions()
 {
-    ObjectAttr attr = World::Get()->GetObjectAttrs( type );
+    ObjectAttr attr = World::GetObjectAttrs( type );
 
     if ( !attr.GetInvincibleToWeapons() )
     {
@@ -485,7 +485,7 @@ Point Object::CalcObjMiddle()
     }
 
     Point p = { GetX(), GetY() + 8 };
-    ObjectAttr attr = World::Get()->GetObjectAttrs( type );
+    ObjectAttr attr = World::GetObjectAttrs( type );
     if ( attr.GetHalfWidth() )
         p.X += 4;
     else
@@ -633,7 +633,7 @@ void Object::KillObjectNormally( CollisionContext& context )
     // TODO: what deals this damage type?
     bool allowBombDrop = context.DamageType == Damage_Unknown8__;
 
-    World::Get()->IncrementKilledObjectCount( allowBombDrop );
+    World::IncrementKilledObjectCount( allowBombDrop );
 
     decoration = 0x10;
     Sound::PlayEffect( SEffect_monster_die );
@@ -737,7 +737,7 @@ void Object::Shove( CollisionContext& context )
         if ( World::GetCurrentObjectSlot() >= BufferSlot )
             return;
 
-        ObjectAttr attr = World::Get()->GetObjectAttrs( GetType() );
+        ObjectAttr attr = World::GetObjectAttrs( GetType() );
         if (   attr.GetUnknown80__() 
             || GetType() == Obj_Vire )
             return;
@@ -754,7 +754,7 @@ void Object::ShoveObject( CollisionContext& context )
     Object* weaponObj = World::GetObject( context.WeaponSlot );
     int dir = weaponObj->GetFacing();
 
-    ObjectAttr attr = World::Get()->GetObjectAttrs( GetType() );
+    ObjectAttr attr = World::GetObjectAttrs( GetType() );
     if ( attr.GetUnknown80__() )
         dir |= 0x40;
 
@@ -968,7 +968,7 @@ Direction Object::CheckWorldBounds( Direction dir )
         {
             if ( HitsWorldLimit() )
             {
-                World::LeaveRoom( facing, World::Get()->GetRoomId() );
+                World::LeaveRoom( facing, World::GetRoomId() );
                 dir = Dir_None;
                 StopPlayer();
             }
@@ -1013,13 +1013,13 @@ Direction Object::FindUnblockedDir( Direction dir, int firstStep )
 
         if ( IsPlayer() )
         {
-            if ( World::Get()->IsOverworld() )
+            if ( World::IsOverworld() )
             {
                 PushOWTile( collision );
             }
             dir = Dir_None;
             // ORIGINAL: [$F8] := 0
-            if ( World::Get()->IsOverworld() )
+            if ( World::IsOverworld() )
                 return CheckWorldBounds( dir );
             return dir;
         }

@@ -715,7 +715,7 @@ static void SetLevelPalettes( const uint8_t palettes[2][PaletteLength] )
 
 static void SetLevelPalette()
 {
-    const World::LevelInfoBlock* infoBlock = World::Get()->GetLevelInfo();
+    const World::LevelInfoBlock* infoBlock = World::GetLevelInfo();
 
     for ( int i = 2; i < BackgroundPalCount; i++ )
     {
@@ -727,7 +727,7 @@ static void SetLevelPalette()
 
 static void SetLevelFgPalette()
 {
-    const World::LevelInfoBlock* infoBlock = World::Get()->GetLevelInfo();
+    const World::LevelInfoBlock* infoBlock = World::GetLevelInfo();
     Graphics::SetPaletteIndexed( LevelFgPalette, infoBlock->Palettes[LevelFgPalette] );
 }
 
@@ -2028,7 +2028,7 @@ UWRoomFlags& World::GetUWRoomFlags( int curRoomId )
 
 const World::LevelInfoBlock* World::GetLevelInfo()
 {
-    return &infoBlock;
+    return &sWorld->infoBlock;
 }
 
 bool World::IsOverworld()
@@ -2049,7 +2049,7 @@ int World::GetTileAction( int tileRef )
 
 bool World::IsUWMain( int roomId )
 {
-    return !IsOverworld() && (roomAttrs[roomId].GetUniqueRoomId() < 0x3E);
+    return !IsOverworld() && (sWorld->roomAttrs[roomId].GetUniqueRoomId() < 0x3E);
 }
 
 bool World::IsUWCellar( int roomId )
@@ -2088,12 +2088,12 @@ void World::TakeShortcut()
 
 void World::TakeSecret()
 {
-    profile.OverworldFlags[curRoomId].SetSecretState();
+    profile.OverworldFlags[sWorld->curRoomId].SetSecretState();
 }
 
 bool World::GotItem()
 {
-    return GotItem( curRoomId );
+    return GotItem( sWorld->curRoomId );
 }
 
 bool World::GotItem( int roomId )
@@ -2112,11 +2112,11 @@ void World::MarkItem()
 {
     if ( IsOverworld() )
     {
-        profile.OverworldFlags[curRoomId].SetItemState();
+        profile.OverworldFlags[sWorld->curRoomId].SetItemState();
     }
     else
     {
-        curUWBlockFlags[curRoomId].SetItemState();
+        curUWBlockFlags[sWorld->curRoomId].SetItemState();
     }
 }
 
@@ -2148,22 +2148,22 @@ bool World::IsLiftingItem()
 
 void World::OpenShutters()
 {
-    tempShutters = true;
-    tempShuttersRoomId = curRoomId;
+    sWorld->tempShutters = true;
+    sWorld->tempShuttersRoomId = sWorld->curRoomId;
     Sound::PlayEffect( SEffect_door );
 }
 
 void World::IncrementKilledObjectCount( bool allowBombDrop )
 {
-    worldKillCount++;
+    sWorld->worldKillCount++;
 
-    if ( helpDropCounter < 0xA )
+    if ( sWorld->helpDropCounter < 0xA )
     {
-        helpDropCounter++;
-        if ( helpDropCounter == 0xA )
+        sWorld->helpDropCounter++;
+        if ( sWorld->helpDropCounter == 0xA )
         {
             if ( allowBombDrop )
-                helpDropValue++;
+                sWorld->helpDropValue++;
         }
     }
 }
@@ -2171,35 +2171,35 @@ void World::IncrementKilledObjectCount( bool allowBombDrop )
 // $7B67
 void World::ResetKilledObjectCount()
 {
-    worldKillCount = 0;
-    helpDropCounter = 0;
-    helpDropValue = 0;
+    sWorld->worldKillCount = 0;
+    sWorld->helpDropCounter = 0;
+    sWorld->helpDropValue = 0;
 }
 
 void World::IncrementRoomKillCount()
 {
-    roomKillCount++;
+    sWorld->roomKillCount++;
 }
 
 void World::SetBombItemDrop()
 {
-    helpDropCounter = 0xA;
-    helpDropValue = 0xA;
+    sWorld->helpDropCounter = 0xA;
+    sWorld->helpDropValue = 0xA;
 }
 
 int World::GetRoomObjCount()
 {
-    return roomObjCount;
+    return sWorld->roomObjCount;
 }
 
 void World::SetRoomObjCount( int value )
 {
-    roomObjCount = value;
+    sWorld->roomObjCount = value;
 }
 
 int  World::GetRoomObjId()
 {
-    return roomObjId;
+    return sWorld->roomObjId;
 }
 
 void World::SetObservedPlayerPos( int x, int y )
@@ -2335,20 +2335,20 @@ const ObjectAttr* World::GetObjectAttrs()
 
 ObjectAttr World::GetObjectAttrs( int type )
 {
-    const ObjectAttr* objAttrs = GetObjectAttrs();
+    const ObjectAttr* objAttrs = sWorld->GetObjectAttrs();
     return objAttrs[type];
 }
 
 int World::GetObjectMaxHP( int type )
 {
-    const HPAttr* hpAttrs = (HPAttr*) extraData.GetItem( Extra_HitPoints );
+    const HPAttr* hpAttrs = (HPAttr*) sWorld->extraData.GetItem( Extra_HitPoints );
     int index = type / 2;
     return hpAttrs[index].GetHP( type );
 }
 
 int World::GetPlayerDamage( int type )
 {
-    const uint8_t* damageAttrs = (uint8_t*) extraData.GetItem( Extra_PlayerDamage );
+    const uint8_t* damageAttrs = (uint8_t*) sWorld->extraData.GetItem( Extra_PlayerDamage );
     const uint8_t damageByte = damageAttrs[type];
     return ((damageByte & 0xF) << 8) | (damageByte & 0xF0);
 }

@@ -633,7 +633,7 @@ void Player::BeHarmed( Object* collider, Point& otherMiddle )
     // The original sets [$C] here. [6] was already set to the result of DoObjectsCollide.
     // [$C] takes on the same values as [6], so I don't know why it was needed.
 
-    uint16_t damage = World::Get()->GetPlayerDamage( collider->GetType() );
+    uint16_t damage = World::GetPlayerDamage( collider->GetType() );
     BeHarmed( collider, otherMiddle, damage );
 }
 
@@ -647,7 +647,7 @@ void Player::BeHarmed( Object* collider, Point& otherMiddle, uint16_t damage )
 
     damage >>= ringValue;
 
-    World::Get()->ResetKilledObjectCount();
+    World::ResetKilledObjectCount();
 
     if ( profile.Hearts <= damage )
     {

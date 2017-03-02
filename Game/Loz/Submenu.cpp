@@ -526,7 +526,7 @@ void Submenu::DrawMap( int top )
         }
     }
 
-    const World::LevelInfoBlock* levelInfo = World::Get()->GetLevelInfo();
+    const World::LevelInfoBlock* levelInfo = World::GetLevelInfo();
     bool hasMap = World::HasCurrentMap();
     bool hasCompass = World::HasCurrentCompass();
 
@@ -566,7 +566,7 @@ void Submenu::DrawMap( int top )
         }
     }
 
-    int curRoomId = World::Get()->GetRoomId();
+    int curRoomId = World::GetRoomId();
     int playerRow = (curRoomId >> 4) & 0xF;
     int playerCol = curRoomId & 0xF;
     playerCol = (playerCol + levelInfo->DrawnMapOffset) & 0xF;

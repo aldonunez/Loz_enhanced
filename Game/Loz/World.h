@@ -791,28 +791,28 @@ public:
     static bool GetDoorState( int door );
     static UWRoomFlags& GetUWRoomFlags( int curRoomId );
 
-    const LevelInfoBlock* GetLevelInfo();
-    bool IsUWMain( int roomId );
-    bool IsPlayingCave();
+    static const LevelInfoBlock* GetLevelInfo();
+    static bool IsUWMain( int roomId );
+    static bool IsPlayingCave();
 
-    bool GotItem();
-    bool GotItem( int roomId );
-    void TakeSecret();
-    void MarkItem();
-    void LiftItem( int itemId, uint16_t timer = 0x80 );
-    void OpenShutters();
-    void ResetKilledObjectCount();
-    void IncrementKilledObjectCount( bool allowBombDrop );
-    void IncrementRoomKillCount();
-    void SetBombItemDrop();
-    int  GetRoomObjCount();
-    void SetRoomObjCount( int value );
-    int  GetRoomObjId();
-    void SetObservedPlayerPos( int x, int y );
+    static bool GotItem();
+    static bool GotItem( int roomId );
+    static void TakeSecret();
+    static void MarkItem();
+    static void LiftItem( int itemId, uint16_t timer = 0x80 );
+    static void OpenShutters();
+    static void ResetKilledObjectCount();
+    static void IncrementKilledObjectCount( bool allowBombDrop );
+    static void IncrementRoomKillCount();
+    static void SetBombItemDrop();
+    static int  GetRoomObjCount();
+    static void SetRoomObjCount( int value );
+    static int  GetRoomObjId();
+    static void SetObservedPlayerPos( int x, int y );
 
-    ObjectAttr GetObjectAttrs( int type );
-    int GetObjectMaxHP( int type );
-    int GetPlayerDamage( int type );
+    static ObjectAttr GetObjectAttrs( int type );
+    static int GetObjectMaxHP( int type );
+    static int GetPlayerDamage( int type );
 
     static void SetPersonWallY( int y );
     static int  GetFadeStep();

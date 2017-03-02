@@ -1203,7 +1203,7 @@ void Zol::UpdateShove()
 void Zol::UpdateSplit()
 {
     isDeleted = true;
-    World::Get()->SetRoomObjCount( World::Get()->GetRoomObjCount() + 1 );
+    World::SetRoomObjCount( World::GetRoomObjCount() + 1 );
 
     const static Direction sHDirs[] = { Dir_Right, Dir_Left };
     const static Direction sVDirs[] = { Dir_Down, Dir_Up };
@@ -1356,7 +1356,7 @@ void Vire::UpdateShove()
 void Vire::UpdateSplit()
 {
     isDeleted = true;
-    World::Get()->SetRoomObjCount( World::Get()->GetRoomObjCount() + 1 );
+    World::SetRoomObjCount( World::GetRoomObjCount() + 1 );
 
     for ( int i = 0; i < 2; i++ )
     {
@@ -2418,7 +2418,7 @@ Object* Moldorm::MakeSet()
     head2->facing = Util::GetDirection8( r );
     head2->oldFacing = head2->facing;
 
-    World::Get()->SetRoomObjCount( 8 );
+    World::SetRoomObjCount( 8 );
 
     return World::GetObject( 0 );
 }
@@ -4132,7 +4132,7 @@ Object* Lamnola::MakeSet( ObjType type )
     head1->facing = Dir_Up;
     head2->facing = Dir_Up;
 
-    World::Get()->SetRoomObjCount( 8 );
+    World::SetRoomObjCount( 8 );
 
     return World::GetObject( 0 );
 }
@@ -4736,7 +4736,7 @@ void Dodongo::CheckPlayerHit()
     }
 
     UpdateBloatedDie();
-    World::Get()->SetBombItemDrop();
+    World::SetBombItemDrop();
 }
 
 void Dodongo::CheckPlayerHitStdSize()
@@ -5347,7 +5347,7 @@ void Digdogger::UpdateSplit()
         else
         {
             World::SetRecorderUsed( 1 );
-            World::Get()->SetRoomObjCount( childCount );
+            World::SetRoomObjCount( childCount );
             for ( int i = 1; i <= childCount; i++ )
             {
                 Object* child = DigdoggerChild::Make( objX, objY );
@@ -6202,7 +6202,7 @@ void Ganon::Draw()
 
 void Ganon::UpdateHoldDark()
 {
-    World::Get()->LiftItem( Item_TriforcePiece, 0 );
+    World::LiftItem( Item_TriforcePiece, 0 );
 
     if ( World::GetPlayer()->GetObjectTimer() != 0 )
     {
@@ -6229,12 +6229,12 @@ void Ganon::UpdateHoldDark()
 
 void Ganon::UpdateHoldLight()
 {
-    World::Get()->LiftItem( Item_TriforcePiece, 0 );
+    World::LiftItem( Item_TriforcePiece, 0 );
 
     if ( World::GetPlayer()->GetObjectTimer() == 0 )
     {
         World::GetPlayer()->SetState( Player::Idle );
-        World::Get()->LiftItem( Item_None );
+        World::LiftItem( Item_None );
         Sound::PlaySong( Song_level9, Sound::MainSongStream, true );
         Sound::PlayEffect( SEffect_boss_roar1, true, Sound::AmbientInstance );
         state = 2;
@@ -6302,7 +6302,7 @@ void Ganon::UpdateDying()
         Object* triforce = World::GetObject( ItemSlot );
         triforce->SetX( objX );
         triforce->SetY( objY );
-        World::Get()->IncrementRoomKillCount();
+        World::IncrementRoomKillCount();
         Sound::PlayEffect( SEffect_room_item );
     }
 }
@@ -6618,7 +6618,7 @@ void RupeeStash::Update()
         && distanceY <= 8 )
     {
         World::PostRupeeWin( 1 );
-        World::Get()->IncrementRoomKillCount();
+        World::IncrementRoomKillCount();
         isDeleted = true;
     }
 }
