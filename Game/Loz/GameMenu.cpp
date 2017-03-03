@@ -78,7 +78,7 @@ void StartWorld( int fileIndex )
 {
     Profile profile;
     SaveFolder::ReadProfile( fileIndex, profile );
-    World::Get()->Start( fileIndex, profile );
+    World::Start( fileIndex, profile );
 }
 
 void GameMenu::Update()

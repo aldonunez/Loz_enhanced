@@ -49,9 +49,7 @@ void Run()
     al_register_event_source( eventQ, displaySource );
     al_register_event_source( eventQ, joystickSource );
 
-    World world;
-
-    world.Init();
+    World::Init();
 
     double startTime = al_get_time();
     double waitSpan = 0;
@@ -90,7 +88,7 @@ void Run()
             frameCounter++;
 
             Input::Update();
-            world.Update();
+            World::Update();
             Sound::Update();
 
             startTime += FrameTime;
@@ -99,7 +97,7 @@ void Run()
 
         if ( updated )
         {
-            world.Draw();
+            World::Draw();
 
             al_flip_display();
         }
@@ -112,7 +110,7 @@ void Run()
     }
 
 Done:
-    ;
+    World::Uninit();
 }
 
 void ResizeView( int screenWidth, int screenHeight )
