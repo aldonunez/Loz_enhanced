@@ -7,6 +7,7 @@
 
 #include "Common.h"
 #include "World.h"
+#include "WorldImpl.h"
 #include "Graphics.h"
 #include "Input.h"
 #include "TileAttr.h"

@@ -148,6 +148,7 @@
     <ClInclude Include="UWBossAnim.h" />
     <ClInclude Include="UWNpcsAnim.h" />
     <ClInclude Include="World.h" />
+    <ClInclude Include="WorldImpl.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="tileShaderPixel.glsl">
