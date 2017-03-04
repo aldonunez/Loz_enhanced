@@ -87,6 +87,10 @@
       <AdditionalLibraryDirectories>$(ALLEGRO_LIB_ROOT);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>allegro.lib;allegro_main.lib;allegro_audio.lib;allegro_acodec.lib;allegro_image.lib;allegro_dialog.lib;allegro_primitives.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <Manifest />
+    <Manifest>
+      <EnableDPIAwareness>true</EnableDPIAwareness>
+    </Manifest>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Common.cpp">
