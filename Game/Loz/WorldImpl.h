@@ -496,6 +496,36 @@ public:
     static UpdateFunc sWinGameFuncs[WinGameState::MaxSubstate];
     static UpdateFunc sDeathFuncs[DeathState::MaxSubstate];
 
+    Player* player;
+    bool    giveFakePlayerPos;
+    int     playerPosTimer;
+    Point   fakePlayerPos;
+
+    Object* objects[MaxObjects];
+    Object* objectsToDelete[MaxObjects];
+    int     objectsToDeleteCount;
+    int     objectTimers[MaxObjects];
+    int     curObjSlot;
+    int     longTimer;
+    int     stunTimers[MaxObjects];
+    uint8_t placeholderTypes[MaxObjects];
+
+    Direction       doorwayDir;         // 53
+    int             triggeredDoorCmd;   // 54
+    Direction       triggeredDoorDir;   // 55
+    int             fromUnderground;    // 5A
+    int             activeShots;        // 34C
+    bool            triggerShutters;    // 4CE
+    bool            summonedWhirlwind;  // 508
+    bool            powerTriforceFanfare;   // 509
+    int             recorderUsed;       // 51B
+    bool            candleUsed;         // 513
+    Direction       shuttersPassedDirs; // 519
+    bool            brightenRoom;       // 51E
+    int             profileSlot;
+    Profile         profile;
+    UWRoomFlags*    curUWBlockFlags;
+
 public:
     WorldImpl();
     ~WorldImpl();
@@ -711,6 +741,7 @@ public:
     void InteractTile( int row, int col, TileInteraction interaction );
     void MakeActivatedObject( int type, int row, int col );
 
+private:
     void NoneTileAction( int row, int col, TileInteraction interaction );
     void PushTileAction( int row, int col, TileInteraction interaction );
     void BombTileAction( int row, int col, TileInteraction interaction );
@@ -724,10 +755,34 @@ public:
     void ArmosTileAction( int row, int col, TileInteraction interaction );
     void BlockTileAction( int row, int col, TileInteraction interaction );
 
-    void ClearRoomItemData();
-    void SetPlayerColor();
+public:
     void AddItem( int itemId );
     void DecrementItem( int itemSlot );
     bool HasCurrentLevelItem( int itemSlot1To8, int itemSlot9 );
     void FillHearts( int heartValue );
+
+    void SetOnlyObject( int slot, Object* obj );
+    Ladder* GetLadderObj();
+    void SetLadderObj( Ladder* ladder );
+    int FindEmptyMonsterSlot();
+
+    void OnTouchedPowerTriforce();
+    void LiftItem( int itemId, uint16_t timer );
+
+private:
+    void ClearRoomItemData();
+    void SetPlayerColor();
+
+    void ClearDeadObjectQueue();
+    void SetBlockObj( Object* block );
+    void DeleteObjects();
+    void CleanUpRoomItems();
+    void DeleteDeadObjects();
+    void InitObjectTimers();
+    void DecrementObjectTimers();
+    void InitStunTimers();
+    void DecrementStunTimers();
+    void InitPlaceholderTypes();
+
+    void MovePlayer( Direction dir, int speed, int& fraction );
 };

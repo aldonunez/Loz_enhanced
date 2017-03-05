@@ -399,36 +399,6 @@ WorldImpl::UpdateFunc WorldImpl::sLeaveCellarFuncs[LeaveCellarState::MaxSubstate
 
 static WorldImpl* sWorld;
 
-Player* player;
-bool    giveFakePlayerPos;
-int     playerPosTimer;
-Point   fakePlayerPos;
-
-Object* objects[MaxObjects];
-Object* objectsToDelete[MaxObjects];
-int     objectsToDeleteCount;
-int     objectTimers[MaxObjects];
-int     curObjSlot;
-int     longTimer;
-int     stunTimers[MaxObjects];
-uint8_t placeholderTypes[MaxObjects];
-
-Direction       doorwayDir;         // 53
-int             triggeredDoorCmd;   // 54
-Direction       triggeredDoorDir;   // 55
-int             fromUnderground;    // 5A
-int             activeShots;        // 34C
-bool            triggerShutters;    // 4CE
-bool            summonedWhirlwind;  // 508
-bool            powerTriforceFanfare;   // 509
-int             recorderUsed;       // 51B
-bool            candleUsed;         // 513
-Direction       shuttersPassedDirs; // 519
-bool            brightenRoom;       // 51E
-int             profileSlot;
-Profile         profile;
-UWRoomFlags*    curUWBlockFlags;
-
 
 void GetWorldCoord( int roomId, int& row, int& col )
 {
@@ -518,7 +488,7 @@ void ClearScreen( int sysColor )
     al_clear_to_color( color );
 }
 
-void ClearDeadObjectQueue()
+void WorldImpl::ClearDeadObjectQueue()
 {
     for ( int i = 0; i < objectsToDeleteCount; i++ )
     {
@@ -529,7 +499,7 @@ void ClearDeadObjectQueue()
     objectsToDeleteCount = 0;
 }
 
-void SetOnlyObject( int slot, Object* obj )
+void WorldImpl::SetOnlyObject( int slot, Object* obj )
 {
     assert( slot >= 0 && slot < MaxObjects );
     if ( objects[slot] != nullptr )
@@ -542,22 +512,22 @@ void SetOnlyObject( int slot, Object* obj )
     objects[slot] = obj;
 }
 
-Ladder* GetLadderObj()
+Ladder* WorldImpl::GetLadderObj()
 {
     return (Ladder*) objects[LadderSlot];
 }
 
-void SetLadderObj( Ladder* ladder )
+void WorldImpl::SetLadderObj( Ladder* ladder )
 {
     SetOnlyObject( LadderSlot, ladder );
 }
 
-void SetBlockObj( Object* block )
+void WorldImpl::SetBlockObj( Object* block )
 {
     SetOnlyObject( BlockSlot, block );
 }
 
-void DeleteObjects()
+void WorldImpl::DeleteObjects()
 {
     for ( int i = 0; i < MaxObjects; i++ )
     {
@@ -571,13 +541,13 @@ void DeleteObjects()
     ClearDeadObjectQueue();
 }
 
-void CleanUpRoomItems()
+void WorldImpl::CleanUpRoomItems()
 {
     DeleteObjects();
     World::SetItem( ItemSlot_Clock, 0 );
 }
 
-void DeleteDeadObjects()
+void WorldImpl::DeleteDeadObjects()
 {
     for ( int i = 0; i < MaxObjects; i++ )
     {
@@ -592,7 +562,7 @@ void DeleteDeadObjects()
     ClearDeadObjectQueue();
 }
 
-void InitObjectTimers()
+void WorldImpl::InitObjectTimers()
 {
     for ( int i = 0; i < MaxObjects; i++ )
     {
@@ -600,7 +570,7 @@ void InitObjectTimers()
     }
 }
 
-void DecrementObjectTimers()
+void WorldImpl::DecrementObjectTimers()
 {
     for ( int i = 0; i < MaxObjects; i++ )
     {
@@ -615,7 +585,7 @@ void DecrementObjectTimers()
     player->DecrementObjectTimer();
 }
 
-void InitStunTimers()
+void WorldImpl::InitStunTimers()
 {
     longTimer = 0;
     for ( int i = 0; i < MaxObjects; i++ )
@@ -624,7 +594,7 @@ void InitStunTimers()
     }
 }
 
-void DecrementStunTimers()
+void WorldImpl::DecrementStunTimers()
 {
     if ( longTimer > 0 )
     {
@@ -647,12 +617,12 @@ void DecrementStunTimers()
     player->DecrementStunTimer();
 }
 
-void InitPlaceholderTypes()
+void WorldImpl::InitPlaceholderTypes()
 {
     memset( placeholderTypes, 0, sizeof placeholderTypes );
 }
 
-int FindEmptyMonsterSlot()
+int WorldImpl::FindEmptyMonsterSlot()
 {
     for ( int i = LastMonsterSlot; i >= 0; i-- )
     {
@@ -662,7 +632,7 @@ int FindEmptyMonsterSlot()
     return -1;
 }
 
-void ClearRoomItemData()
+void WorldImpl::ClearRoomItemData()
 {
     recorderUsed = 0;
     candleUsed = false;
@@ -672,7 +642,7 @@ void ClearRoomItemData()
     activeShots = 0;
 }
 
-static void SetPlayerColor()
+void WorldImpl::SetPlayerColor()
 {
     static const uint8_t sysColors[] = 
     {
@@ -770,7 +740,37 @@ WorldImpl::WorldImpl()
         textBox2( nullptr ),
         credits( nullptr ),
         gameMenu( nullptr ),
-        nextGameMenu( nullptr )
+        nextGameMenu( nullptr ),
+
+        player(),
+        giveFakePlayerPos(),
+        playerPosTimer(),
+        fakePlayerPos(),
+
+        objects(),
+        objectsToDelete(),
+        objectsToDeleteCount(),
+        objectTimers(),
+        curObjSlot(),
+        longTimer(),
+        stunTimers(),
+        placeholderTypes(),
+
+        doorwayDir(),
+        triggeredDoorCmd(),
+        triggeredDoorDir(),
+        fromUnderground(),
+        activeShots(),
+        triggerShutters(),
+        summonedWhirlwind(),
+        powerTriforceFanfare(),
+        recorderUsed(),
+        candleUsed(),
+        shuttersPassedDirs(),
+        brightenRoom(),
+        profileSlot(),
+        profile(),
+        curUWBlockFlags()
 {
 }
 
@@ -969,8 +969,8 @@ void WorldImpl::Init()
 
 void WorldImpl::Start( int slot, const Profile& profile )
 {
-    ::profile = profile;
-    ::profile.Hearts = Profile::GetMaxHeartsValue( DefaultHearts );
+    this->profile = profile;
+    this->profile.Hearts = Profile::GetMaxHeartsValue( DefaultHearts );
     profileSlot = slot;
 
     GotoLoadLevel( 0, true );
@@ -1116,22 +1116,22 @@ int World::GetMarginTop()
 
 Player* World::GetPlayer()
 {
-    return player;
+    return sWorld->player;
 }
 
 Point World::GetObservedPlayerPos()
 {
-    return fakePlayerPos;
+    return sWorld->fakePlayerPos;
 }
 
 Ladder* World::GetLadder()
 {
-    return GetLadderObj();
+    return sWorld->GetLadderObj();
 }
 
 void World::SetLadder( Ladder* ladder )
 {
-    SetLadderObj( ladder );
+    sWorld->SetLadderObj( ladder );
 }
 
 void World::UseRecorder()
@@ -1216,22 +1216,22 @@ void WorldImpl::MakeFluteSecret()
 
 int World::GetRecorderUsed()
 {
-    return recorderUsed;
+    return sWorld->recorderUsed;
 }
 
 void World::SetRecorderUsed( int value )
 {
-    recorderUsed = value;
+    sWorld->recorderUsed = value;
 }
 
 bool World::GetCandleUsed()
 {
-    return candleUsed;
+    return sWorld->candleUsed;
 }
 
 void World::SetCandleUsed()
 {
-    candleUsed = true;
+    sWorld->candleUsed = true;
 }
 
 int World::GetWhirlwindTeleporting()
@@ -1322,25 +1322,25 @@ Point WorldImpl::GetRandomWaterTileImpl()
 Object* World::GetObject( int slot )
 {
     if ( slot == PlayerSlot )
-        return player;
-    return objects[slot];
+        return sWorld->player;
+    return sWorld->objects[slot];
 }
 
 void World::SetObject( int slot, Object* obj )
 {
-    SetOnlyObject( slot, obj );
+    sWorld->SetOnlyObject( slot, obj );
 }
 
 int World::FindEmptyMonsterSlot()
 {
-    return ::FindEmptyMonsterSlot();
+    return sWorld->FindEmptyMonsterSlot();
 }
 
 int World::FindEmptyFireSlot()
 {
     for ( int i = FirstFireSlot; i < LastFireSlot; i++ )
     {
-        if ( objects[i] == nullptr )
+        if ( sWorld->objects[i] == nullptr )
             return i;
     }
     return -1;
@@ -1348,32 +1348,32 @@ int World::FindEmptyFireSlot()
 
 int World::GetCurrentObjectSlot()
 {
-    return curObjSlot;
+    return sWorld->curObjSlot;
 }
 
 void World::SetCurrentObjectSlot( int slot )
 {
-    curObjSlot = slot;
+    sWorld->curObjSlot = slot;
 }
 
 int& World::GetObjectTimer( int slot )
 {
-    return objectTimers[slot];
+    return sWorld->objectTimers[slot];
 }
 
 void World::SetObjectTimer( int slot, int value )
 {
-    objectTimers[slot] = value;
+    sWorld->objectTimers[slot] = value;
 }
 
 int  World::GetStunTimer( int slot )
 {
-    return stunTimers[slot];
+    return sWorld->stunTimers[slot];
 }
 
 void World::SetStunTimer( int slot, int value )
 {
-    stunTimers[slot] = value;
+    sWorld->stunTimers[slot] = value;
 }
 
 void World::PushTile( int row, int col )
@@ -1597,6 +1597,11 @@ void WorldImpl::OnActivatedArmosImpl( int x, int y )
 }
 
 void World::OnTouchedPowerTriforce()
+{
+    sWorld->OnTouchedPowerTriforce();
+}
+
+void WorldImpl::OnTouchedPowerTriforce()
 {
     powerTriforceFanfare = true;
     player->SetState( Player::Paused );
@@ -1844,20 +1849,20 @@ void WorldImpl::DrawDoors( int roomId, bool above, int offsetX, int offsetY )
 
 Profile& World::GetProfile()
 {
-    return profile;
+    return sWorld->profile;
 }
 
 uint8_t World::GetItem( int itemSlot )
 {
-    return profile.Items[itemSlot];
+    return sWorld->profile.Items[itemSlot];
 }
 
 void World::SetItem( int itemSlot, int value )
 {
-    profile.Items[itemSlot] = value;
+    sWorld->profile.Items[itemSlot] = value;
 }
 
-static void PostRupeeChange( uint8_t value, int itemSlot )
+void WorldImpl::PostRupeeChange( uint8_t value, int itemSlot )
 {
     uint8_t curValue = profile.Items[itemSlot];
     uint8_t newValue = curValue + value;
@@ -1870,15 +1875,20 @@ static void PostRupeeChange( uint8_t value, int itemSlot )
 
 void World::PostRupeeWin( uint8_t value )
 {
-    PostRupeeChange( value, ItemSlot_RupeesToAdd );
+    sWorld->PostRupeeChange( value, ItemSlot_RupeesToAdd );
 }
 
 void World::PostRupeeLoss( uint8_t value )
 {
-    PostRupeeChange( value, ItemSlot_RupeesToSubtract );
+    sWorld->PostRupeeChange( value, ItemSlot_RupeesToSubtract );
 }
 
 void World::FillHearts( int heartValue )
+{
+    sWorld->FillHearts( heartValue );
+}
+
+void WorldImpl::FillHearts( int heartValue )
 {
     unsigned int maxHeartValue = profile.Items[ItemSlot_HeartContainers] << 8;
 
@@ -1889,6 +1899,11 @@ void World::FillHearts( int heartValue )
 }
 
 void World::AddItem( int itemId )
+{
+    sWorld->AddItem( itemId );
+}
+
+void WorldImpl::AddItem( int itemId )
 {
     if ( itemId >= Item_None )
         return;
@@ -1959,6 +1974,11 @@ void World::AddItem( int itemId )
 
 void World::DecrementItem( int itemSlot )
 {
+    sWorld->DecrementItem( itemSlot );
+}
+
+void WorldImpl::DecrementItem( int itemSlot )
+{
     if ( profile.Items[itemSlot] != 0 )
         profile.Items[itemSlot]--;
 }
@@ -1974,6 +1994,11 @@ bool World::HasCurrentCompass()
 }
 
 bool World::HasCurrentLevelItem( int itemSlot1To8, int itemSlot9 )
+{
+    return sWorld->HasCurrentLevelItem( itemSlot1To8, itemSlot9 );
+}
+
+bool WorldImpl::HasCurrentLevelItem( int itemSlot1To8, int itemSlot9 )
 {
     if ( sWorld->infoBlock.LevelNumber == 0 )
         return false;
@@ -2021,7 +2046,7 @@ bool World::GetDoorState( int door )
 
 UWRoomFlags& World::GetUWRoomFlags( int curRoomId )
 {
-    return curUWBlockFlags[curRoomId];
+    return sWorld->curUWBlockFlags[curRoomId];
 }
 
 const World::LevelInfoBlock* World::GetLevelInfo()
@@ -2086,7 +2111,7 @@ void WorldImpl::TakeShortcut()
 
 void World::TakeSecret()
 {
-    profile.OverworldFlags[sWorld->curRoomId].SetSecretState();
+    sWorld->profile.OverworldFlags[sWorld->curRoomId].SetSecretState();
 }
 
 bool World::GotItem()
@@ -2098,11 +2123,11 @@ bool World::GotItem( int roomId )
 {
     if ( IsOverworld() )
     {
-        return profile.OverworldFlags[roomId].GetItemState();
+        return sWorld->profile.OverworldFlags[roomId].GetItemState();
     }
     else
     {
-        return curUWBlockFlags[roomId].GetItemState();
+        return sWorld->curUWBlockFlags[roomId].GetItemState();
     }
 }
 
@@ -2110,28 +2135,33 @@ void World::MarkItem()
 {
     if ( IsOverworld() )
     {
-        profile.OverworldFlags[sWorld->curRoomId].SetItemState();
+        sWorld->profile.OverworldFlags[sWorld->curRoomId].SetItemState();
     }
     else
     {
-        curUWBlockFlags[sWorld->curRoomId].SetItemState();
+        sWorld->curUWBlockFlags[sWorld->curRoomId].SetItemState();
     }
 }
 
 void World::LiftItem( int itemId, uint16_t timer )
+{
+    sWorld->LiftItem( itemId, timer );
+}
+
+void WorldImpl::LiftItem( int itemId, uint16_t timer )
 {
     if ( !IsPlaying() )
         return;
 
     if ( itemId == Item_None || itemId == 0 )
     {
-        sWorld->state.play.liftItemTimer = 0;
-        sWorld->state.play.liftItemId = 0;
+        state.play.liftItemTimer = 0;
+        state.play.liftItemId = 0;
         return;
     }
 
-    sWorld->state.play.liftItemTimer = timer;
-    sWorld->state.play.liftItemId = itemId;
+    state.play.liftItemTimer = timer;
+    state.play.liftItemId = itemId;
 
     player->SetState( Player::Paused );
 }
@@ -2202,8 +2232,8 @@ int  World::GetRoomObjId()
 
 void World::SetObservedPlayerPos( int x, int y )
 {
-    fakePlayerPos.X = x;
-    fakePlayerPos.Y = y;
+    sWorld->fakePlayerPos.X = x;
+    sWorld->fakePlayerPos.Y = y;
 }
 
 void World::SetPersonWallY( int y )
@@ -2219,7 +2249,7 @@ int  World::GetFadeStep()
 void World::BeginFadeIn()
 {
     if ( sWorld->darkRoomFadeStep > 0 )
-        brightenRoom = true;
+        sWorld->brightenRoom = true;
 }
 
 void World::FadeIn()
@@ -2432,62 +2462,62 @@ void WorldImpl::AddUWRoomItem( int roomId )
 
 Direction World::GetDoorwayDir()
 {
-    return doorwayDir;
+    return sWorld->doorwayDir;
 }
 
 void World::SetDoorwayDir( Direction dir )
 {
-    doorwayDir = dir;
+    sWorld->doorwayDir = dir;
 }
 
 int  World::GetFromUnderground()
 {
-    return fromUnderground;
+    return sWorld->fromUnderground;
 }
 
 void World::SetFromUnderground( int value )
 {
-    fromUnderground = value;
+    sWorld->fromUnderground = value;
 }
 
 int  World::GetActiveShots()
 {
-    return activeShots;
+    return sWorld->activeShots;
 }
 
 void World::SetActiveShots( int count )
 {
-    activeShots = count;
+    sWorld->activeShots = count;
 }
 
 Direction World::GetShuttersPassedDirs()
 {
-    return shuttersPassedDirs;
+    return sWorld->shuttersPassedDirs;
 }
 
 void World::SetShuttersPassedDirs( Direction dir )
 {
-    shuttersPassedDirs = dir;
+    sWorld->shuttersPassedDirs = dir;
 }
 
 int  World::GetTriggeredDoorCmd()
 {
-    return triggeredDoorCmd;
+    return sWorld->triggeredDoorCmd;
 }
 
 void World::SetTriggeredDoorCmd( int value )
 {
-    triggeredDoorCmd = value;
+    sWorld->triggeredDoorCmd = value;
 }
 
 Direction World::GetTriggeredDoorDir()
 {
-    return triggeredDoorDir;
+    return sWorld->triggeredDoorDir;
 }
 
 void World::SetTriggeredDoorDir( Direction dir )
 {
-    triggeredDoorDir = dir;
+    sWorld->triggeredDoorDir = dir;
 }
 
 void WorldImpl::LoadCaveRoom( int uniqueRoomId )
@@ -4189,7 +4219,7 @@ void WorldImpl::GotoEnter( Direction dir )
     curMode = Mode_Enter;
 }
 
-void MovePlayer( Direction dir, int speed, int& fraction )
+void WorldImpl::MovePlayer( Direction dir, int speed, int& fraction )
 {
     fraction += speed;
     int carry = fraction >> 8;
