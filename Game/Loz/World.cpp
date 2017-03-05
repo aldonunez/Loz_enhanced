@@ -1136,10 +1136,10 @@ void World::SetLadder( Ladder* ladder )
 
 void World::UseRecorder()
 {
-    sWorld->UseRecorderImpl();
+    sWorld->UseRecorder();
 }
 
-void WorldImpl::UseRecorderImpl()
+void WorldImpl::UseRecorder()
 {
     Sound::PushSong( Song_recorder );
     objectTimers[FluteMusicSlot] = 0x98;
@@ -1261,10 +1261,10 @@ int WorldImpl::GetMapTile( int row, int col )
 
 void World::SetTile( int x, int y, int tileType )
 {
-    sWorld->SetTileImpl( x, y, tileType );
+    sWorld->SetTile( x, y, tileType );
 }
 
-void WorldImpl::SetTileImpl( int x, int y, int tileType )
+void WorldImpl::SetTile( int x, int y, int tileType )
 {
     int col = x / TileWidth;
     int row = (y - TileMapBaseY) / TileHeight;
@@ -1277,20 +1277,20 @@ void WorldImpl::SetTileImpl( int x, int y, int tileType )
 
 int World::GetInnerPalette()
 {
-    return sWorld->GetInnerPaletteImpl();
+    return sWorld->GetInnerPalette();
 }
 
-int WorldImpl::GetInnerPaletteImpl()
+int WorldImpl::GetInnerPalette()
 {
     return roomAttrs[curRoomId].GetInnerPalette();
 }
 
 Point World::GetRandomWaterTile()
 {
-    return sWorld->GetRandomWaterTileImpl();
+    return sWorld->GetRandomWaterTile();
 }
 
-Point WorldImpl::GetRandomWaterTileImpl()
+Point WorldImpl::GetRandomWaterTile()
 {
     uint8_t waterList[Rows * Columns];
     int waterCount = 0;
@@ -1531,10 +1531,10 @@ bool WorldImpl::CollidesWithUWBorder( int fineRow, int fineCol1, int fineCol2 )
 
 void World::OnPushedBlock()
 {
-    sWorld->OnPushedBlockImpl();
+    sWorld->OnPushedBlock();
 }
 
-void WorldImpl::OnPushedBlockImpl()
+void WorldImpl::OnPushedBlock()
 {
     Sound::PlayEffect( SEffect_secret );
 
@@ -1567,21 +1567,21 @@ void WorldImpl::OnPushedBlockImpl()
 
 void World::OnActivatedArmos( int x, int y )
 {
-    sWorld->OnActivatedArmosImpl( x, y );
+    sWorld->OnActivatedArmos( x, y );
 }
 
-void WorldImpl::OnActivatedArmosImpl( int x, int y )
+void WorldImpl::OnActivatedArmos( int x, int y )
 {
     const SparsePos2*   pos = FindSparsePos2( Sparse_ArmosStairs, curRoomId );
 
     if ( pos != nullptr && x == pos->x && y == pos->y )
     {
-        SetTileImpl( x, y, Tile_Stairs );
+        SetTile( x, y, Tile_Stairs );
         Sound::PlayEffect( SEffect_secret );
     }
     else
     {
-        SetTileImpl( x, y, Tile_Ground );
+        SetTile( x, y, Tile_Ground );
     }
 
     if ( !GotItem() )
@@ -2254,10 +2254,10 @@ void World::BeginFadeIn()
 
 void World::FadeIn()
 {
-    sWorld->FadeInImpl();
+    sWorld->FadeIn();
 }
 
-void WorldImpl::FadeInImpl()
+void WorldImpl::FadeIn()
 {
     if ( darkRoomFadeStep == 0 )
     {
@@ -3128,7 +3128,7 @@ void WorldImpl::CheckSecrets()
 
 void WorldImpl::AddUWRoomStairs()
 {
-    SetTileImpl( 0xD0, 0x60, Tile_UW_Stairs );
+    SetTile( 0xD0, 0x60, Tile_UW_Stairs );
 }
 
 void WorldImpl::KillAllObjects()
@@ -4424,10 +4424,10 @@ void WorldImpl::SetPlayerExitPosOW( int roomId )
 
 const uint8_t* World::GetString( int stringId )
 {
-    return sWorld->GetStringImpl( stringId );
+    return sWorld->GetString( stringId );
 }
 
-const uint8_t* WorldImpl::GetStringImpl( int stringId )
+const uint8_t* WorldImpl::GetString( int stringId )
 {
     return textTable.GetItem( stringId );
 }

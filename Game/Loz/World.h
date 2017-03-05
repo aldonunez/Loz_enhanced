@@ -12,7 +12,8 @@
 #include "Submenu.h"
 
 // TODO: Work around a compiler bug by including this file to define ObjectAttrs before 
-//       WorldImpl::GetObjectAttrs.
+//       WorldImpl::GetObjectAttrs. The problem shows up, because I changed GetObjectAttrs
+//       from a instance method to a static method.
 #include "Object.h"
 
 class Player;

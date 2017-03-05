@@ -14,6 +14,15 @@
 class WorldImpl : private World
 {
 public:
+    enum TileInteraction
+    {
+        TInteract_Load,
+        TInteract_Push,
+        TInteract_Touch,
+        TInteract_Cover,
+    };
+
+private:
     static const int Rooms = 128;
     static const int UniqueRooms = 124;
     static const int ColumnTables = 16;
@@ -59,14 +68,6 @@ public:
         uint8_t     tileRefs[Rows][Columns];
     };
 
-    enum TileInteraction
-    {
-        TInteract_Load,
-        TInteract_Push,
-        TInteract_Touch,
-        TInteract_Cover,
-    };
-
     struct SparsePos
     {
         uint8_t     roomId;
@@ -89,10 +90,7 @@ public:
     typedef void (WorldImpl::*DrawFunc)();
     typedef void (WorldImpl::*TileActionFunc)( int row, int col, TileInteraction interaction );
 
-    static TileActionFunc sActionFuncs[TileActions];
-    static UpdateFunc sModeFuncs[Modes];
-    static DrawFunc sDrawFuncs[Modes];
-
+public:
     LevelDirectory  directory;
     LevelInfoBlock  infoBlock;
     RoomCols        roomCols[UniqueRooms];
@@ -129,6 +127,7 @@ public:
     Menu*           gameMenu;
     Menu*           nextGameMenu;
 
+private:
     struct PlayState
     {
         enum Substate
@@ -456,6 +455,17 @@ public:
         ContinueState       continueQuestion;
     };
 
+    static TileActionFunc sActionFuncs[TileActions];
+    static UpdateFunc sModeFuncs[Modes];
+    static DrawFunc sDrawFuncs[Modes];
+
+    static UpdateFunc sLeaveCellarFuncs[LeaveCellarState::MaxSubstate];
+    static UpdateFunc sScrollFuncs[ScrollState::MaxSubstate];
+    static UpdateFunc sEndLevelFuncs[EndLevelState::MaxSubstate];
+    static UpdateFunc sWinGameFuncs[WinGameState::MaxSubstate];
+    static UpdateFunc sDeathFuncs[DeathState::MaxSubstate];
+
+public:
     State           state;
     int             curColorSeqNum;
     int             darkRoomFadeStep;
@@ -489,12 +499,6 @@ public:
     bool            statusBarVisible;
     uint8_t         levelKillCounts[LevelBlockRooms];
     uint8_t         roomHistory[RoomHistoryLength];
-
-    static UpdateFunc sLeaveCellarFuncs[LeaveCellarState::MaxSubstate];
-    static UpdateFunc sScrollFuncs[ScrollState::MaxSubstate];
-    static UpdateFunc sEndLevelFuncs[EndLevelState::MaxSubstate];
-    static UpdateFunc sWinGameFuncs[WinGameState::MaxSubstate];
-    static UpdateFunc sDeathFuncs[DeathState::MaxSubstate];
 
     Player* player;
     bool    giveFakePlayerPos;
@@ -538,11 +542,58 @@ public:
 
 public:
     bool IsUWCellar( int roomId );
+    void TakeShortcut();
+    bool GetDoorState( int door );
+
+    bool FindSparseFlag( int attrId, int roomId );
+    const ObjectAttr* GetObjectAttrs();
+
+    void AddUWRoomItem( int roomId );
+    void PostRupeeChange( uint8_t value, int itemSlot );
+
+    void GotoLeave( Direction dir, int currentRoomId );
+    void GotoUnfurl( bool restartOW = false );
+    void GotoEndLevel();
+    void GotoWinGame();
+    void GotoLeaveCellar();
+    void GotoDie();
+    void GotoFileMenu( const std::shared_ptr<ProfileSummarySnapshot>& summaries );
+    void GotoRegisterMenu( const std::shared_ptr<ProfileSummarySnapshot>& summaries );
+    void GotoEliminateMenu( const std::shared_ptr<ProfileSummarySnapshot>& summaries );
+
+public:
+    const uint8_t* GetString( int stringId );
+    TileCollision CollidesWithTile( int x, int y, Direction dir, int offset );
+    void OnPushedBlock();
+    void OnActivatedArmos( int x, int y );
+
+public:
+    void UseRecorder();
+    void MakeFluteSecret();
+    void SetTile( int x, int y, int tileType );
+    int GetInnerPalette();
+    Point GetRandomWaterTile();
+    void FadeIn();
+    void InteractTile( int row, int col, TileInteraction interaction );
+
+public:
+    void AddItem( int itemId );
+    void DecrementItem( int itemSlot );
+    bool HasCurrentLevelItem( int itemSlot1To8, int itemSlot9 );
+    void FillHearts( int heartValue );
+
+    void SetOnlyObject( int slot, Object* obj );
+    Ladder* GetLadderObj();
+    void SetLadderObj( Ladder* ladder );
+    int FindEmptyMonsterSlot();
+
+    void OnTouchedPowerTriforce();
+    void LiftItem( int itemId, uint16_t timer );
+
+private:
     bool GotShortcut( int roomId );
     bool GotSecret();
-    void TakeShortcut();
     bool UseKey();
-    bool GetDoorState( int door );
     bool GetDoorState( int roomId, int door );
     void SetDoorState( int roomId, int door );
     bool IsRoomInHistory();
@@ -552,11 +603,9 @@ public:
     void OnLeavePlay();
     void ClearLevelData();
 
-    bool FindSparseFlag( int attrId, int roomId );
     const SparsePos* FindSparsePos( int attrId, int roomId );
     const SparsePos2* FindSparsePos2( int attrId, int roomId );
     const SparseRoomItem* FindSparseItem( int attrId, int roomId );
-    const ObjectAttr* GetObjectAttrs();
 
     void LoadLevel( int level );
     void LoadRoom( int roomId, int tileMapIndex );
@@ -583,11 +632,9 @@ public:
     void CheckShutters();
     void UpdateDoors2();
     bool CalcHasLivingObjects();
-    void AddUWRoomItem( int roomId );
     void AddUWRoomStairs();
     void KillAllObjects();
     void MoveRoomItem();
-    void PostRupeeChange( uint8_t value, int itemSlot );
     void UpdateStatues();
     void UpdateObservedPlayerPos();
     void UpdateRupees();
@@ -625,7 +672,6 @@ public:
     void DrawScroll();
 
     void GotoLeave( Direction dir );
-    void GotoLeave( Direction dir, int currentRoomId );
     void UpdateLeave();
     void DrawLeave();
 
@@ -637,11 +683,9 @@ public:
     void UpdateLoadLevel();
     void DrawLoadLevel();
 
-    void GotoUnfurl( bool restartOW = false );
     void UpdateUnfurl();
     void DrawUnfurl();
 
-    void GotoEndLevel();
     void UpdateEndLevel();
     void UpdateEndLevel_Start();
     void UpdateEndLevel_Wait();
@@ -650,7 +694,6 @@ public:
     void UpdateEndLevel_Furl();
     void DrawEndLevel();
 
-    void GotoWinGame();
     void UpdateWinGame();
     void UpdateWinGame_Start();
     void UpdateWinGame_Text1();
@@ -672,7 +715,6 @@ public:
     void UpdatePlayCellar();
     void DrawPlayCellar();
 
-    void GotoLeaveCellar();
     void UpdateLeaveCellar();
     void UpdateLeaveCellar_Start();
     void UpdateLeaveCellar_FadeOut();
@@ -687,7 +729,6 @@ public:
     void UpdatePlayCave();
     void DrawPlayCave();
 
-    void GotoDie();
     void UpdateDie();
     void UpdateDie_Start();
     void UpdateDie_Flash();
@@ -705,9 +746,6 @@ public:
     void DrawContinueQuestion();
 
     void GotoFileMenu();
-    void GotoFileMenu( const std::shared_ptr<ProfileSummarySnapshot>& summaries );
-    void GotoRegisterMenu( const std::shared_ptr<ProfileSummarySnapshot>& summaries );
-    void GotoEliminateMenu( const std::shared_ptr<ProfileSummarySnapshot>& summaries );
     void UpdateGameMenu();
     void UpdateRegisterMenu();
     void UpdateEliminateMenu();
@@ -715,31 +753,21 @@ public:
 
     int FindCellarRoomId( int mainRoomId, bool& isLeft );
     void SetPlayerExitPosOW( int roomId );
-    const uint8_t* GetStringImpl( int stringId );
 
     void DrawRoomNoObjects( SpritePriority playerPriority = SpritePri_AboveBg );
 
+private:
+    void SummonWhirlwind();
+    int GetMapTile( int row, int col );
+    void MakeActivatedObject( int type, int row, int col );
+
     bool CollidesWithUWBorder( int fineRow, int fineCol1, int fineCol2 );
-    TileCollision CollidesWithTile( int x, int y, Direction dir, int offset );
     bool CollidesTile( int row, int col );
-    void OnPushedBlockImpl();
-    void OnActivatedArmosImpl( int x, int y );
     void CheckPowerTriforceFanfare();
     void AdjustInventory();
     void WarnLowHPIfNeeded();
     void PlayAmbientSounds();
     void ShowShortcutStairs( int roomId, int tileMapIndex );
-
-    void UseRecorderImpl();
-    void SummonWhirlwind();
-    void MakeFluteSecret();
-    int GetMapTile( int row, int col );
-    void SetTileImpl( int x, int y, int tileType );
-    int GetInnerPaletteImpl();
-    Point GetRandomWaterTileImpl();
-    void FadeInImpl();
-    void InteractTile( int row, int col, TileInteraction interaction );
-    void MakeActivatedObject( int type, int row, int col );
 
 private:
     void NoneTileAction( int row, int col, TileInteraction interaction );
@@ -754,20 +782,6 @@ private:
     void GhostTileAction( int row, int col, TileInteraction interaction );
     void ArmosTileAction( int row, int col, TileInteraction interaction );
     void BlockTileAction( int row, int col, TileInteraction interaction );
-
-public:
-    void AddItem( int itemId );
-    void DecrementItem( int itemSlot );
-    bool HasCurrentLevelItem( int itemSlot1To8, int itemSlot9 );
-    void FillHearts( int heartValue );
-
-    void SetOnlyObject( int slot, Object* obj );
-    Ladder* GetLadderObj();
-    void SetLadderObj( Ladder* ladder );
-    int FindEmptyMonsterSlot();
-
-    void OnTouchedPowerTriforce();
-    void LiftItem( int itemId, uint16_t timer );
 
 private:
     void ClearRoomItemData();
