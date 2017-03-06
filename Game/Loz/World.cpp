@@ -2746,7 +2746,16 @@ void WorldImpl::UpdatePlay()
 
         if ( submenu != 0 )
         {
-            UpdateSubmenu();
+            if ( Input::IsButtonPressing( InputButtons::Select ) )
+            {
+                submenu = 0;
+                submenuOffsetY = 0;
+                GotoContinueQuestion();
+            }
+            else
+            {
+                UpdateSubmenu();
+            }
             return;
         }
 
