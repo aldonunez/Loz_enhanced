@@ -339,6 +339,23 @@ WorldImpl::DrawFunc WorldImpl::sDrawFuncs[Modes] =
     &WorldImpl::DrawPlayCave,
 };
 
+WorldImpl::UpdateFunc WorldImpl::sPlayCellarFuncs[PlayCellarState::MaxSubstate] =
+{
+    &WorldImpl::UpdatePlayCellar_Start,
+    &WorldImpl::UpdatePlayCellar_FadeOut,
+    &WorldImpl::UpdatePlayCellar_LoadRoom,
+    &WorldImpl::UpdatePlayCellar_FadeIn,
+    &WorldImpl::UpdatePlayCellar_Walk,
+};
+
+WorldImpl::UpdateFunc WorldImpl::sPlayCaveFuncs[PlayCaveState::MaxSubstate] =
+{
+    &WorldImpl::UpdatePlayCave_Start,
+    &WorldImpl::UpdatePlayCave_Wait,
+    &WorldImpl::UpdatePlayCave_LoadRoom,
+    &WorldImpl::UpdatePlayCave_Walk,
+};
+
 WorldImpl::UpdateFunc WorldImpl::sEndLevelFuncs[EndLevelState::MaxSubstate] = 
 {
     &WorldImpl::UpdateEndLevel_Start,
@@ -395,6 +412,15 @@ WorldImpl::UpdateFunc WorldImpl::sLeaveCellarFuncs[LeaveCellarState::MaxSubstate
     &WorldImpl::UpdateLeaveCellar_Walk,
     &WorldImpl::UpdateLeaveCellar_Wait,
     &WorldImpl::UpdateLeaveCellar_LoadOverworldRoom,
+};
+
+WorldImpl::UpdateFunc WorldImpl::sEnterFuncs[EnterState::MaxSubstate] =
+{
+    &WorldImpl::UpdateEnter_Start,
+    &WorldImpl::UpdateEnter_Wait,
+    &WorldImpl::UpdateEnter_FadeIn,
+    &WorldImpl::UpdateEnter_Walk,
+    &WorldImpl::UpdateEnter_WalkCave,
 };
 
 static WorldImpl* sWorld;
@@ -4216,6 +4242,7 @@ void WorldImpl::GotoEnter( Direction dir )
     state.enter.timer = 0;
     state.enter.playerPriority = SpritePri_AboveBg;
     state.enter.playerSpeed = Player::WalkSpeed;
+    state.enter.gotoPlay = false;
     curMode = Mode_Enter;
 }
 
@@ -4235,143 +4262,10 @@ void WorldImpl::MovePlayer( Direction dir, int speed, int& fraction )
 
 void WorldImpl::UpdateEnter()
 {
-    bool play = false;
+    UpdateFunc update = sEnterFuncs[state.enter.substate];
+    (this->*update)();
 
-    if ( state.enter.substate == EnterState::Start )
-    {
-        triggeredDoorCmd = 0;
-        triggeredDoorDir = Dir_None;
-
-        if ( IsOverworld() )
-        {
-            int row = (player->GetY() + 3 - TileMapBaseY) / TileHeight;
-            int col = player->GetX() / TileWidth;
-
-            uint8_t tileRef = tileMaps[curTileMapIndex].tileRefs[row][col];
-            if ( tileRef == Tile_Cave )
-            {
-                player->SetY( player->GetY() + TileHeight );
-                player->SetFacing( Dir_Down );
-
-                state.enter.playerFraction = 0;
-                state.enter.playerSpeed = 0x40;
-                state.enter.playerPriority = SpritePri_BelowBg;
-                state.enter.scrollDir = Dir_Up;
-                state.enter.targetX = player->GetX();
-                state.enter.targetY = player->GetY() - 0x10;
-                state.enter.substate = EnterState::WalkCave;
-
-                Sound::StopAll();
-                Sound::PlayEffect( SEffect_stairs );
-            }
-            else
-            {
-                state.enter.substate = EnterState::Wait;
-                state.enter.timer = EnterState::StateTime;
-            }
-        }
-        else if ( state.enter.scrollDir != Dir_None )
-        {
-            UWRoomAttrs& uwRoomAttrs = (UWRoomAttrs&) roomAttrs[curRoomId];
-            Direction oppositeDir = Util::GetOppositeDir( state.enter.scrollDir );
-            int door = Util::GetDirectionOrd( oppositeDir );
-            int doorType = uwRoomAttrs.GetDoor( door );
-            int distance;
-
-            if ( doorType == DoorType_Shutter || doorType == DoorType_Bombable )
-                distance = TileWidth * 2;
-            else
-                distance = TileWidth;
-
-            state.enter.targetX = player->GetX();
-            state.enter.targetY = player->GetY();
-            Util::MoveSimple( 
-                state.enter.targetX, 
-                state.enter.targetY, 
-                state.enter.scrollDir, 
-                distance );
-
-            if ( !uwRoomAttrs.IsDark() && darkRoomFadeStep > 0 )
-            {
-                state.enter.substate = EnterState::FadeIn;
-                state.enter.timer = 9;
-            }
-            else
-            {
-                state.enter.substate = EnterState::Walk;
-            }
-
-            player->SetFacing( state.enter.scrollDir );
-        }
-        else
-        {
-            state.enter.substate = EnterState::Wait;
-            state.enter.timer = EnterState::StateTime;
-        }
-
-        if ( IsUWMain( curRoomId ) )
-        {
-            doorwayDir = state.enter.scrollDir;
-            triggeredDoorDir = Util::GetOppositeDir( doorwayDir );
-            if ( GetDoorState( triggeredDoorDir ) )
-            {
-                triggeredDoorCmd = 2;
-            }
-            else
-                triggeredDoorDir = Dir_None;
-        }
-        else
-            doorwayDir = Dir_None;
-    }
-    else if ( state.enter.substate == EnterState::Wait )
-    {
-        state.enter.timer--;
-        if ( state.enter.timer == 0 )
-            play = true;
-    }
-    else if ( state.enter.substate == EnterState::FadeIn )
-    {
-        if ( darkRoomFadeStep == 0 )
-        {
-            state.enter.substate = EnterState::Walk;
-        }
-        else
-        {
-            if ( state.enter.timer == 0 )
-            {
-                darkRoomFadeStep--;
-                state.enter.timer = 9;
-
-                for ( int i = 0; i < 2; i++ )
-                {
-                    Graphics::SetPaletteIndexed( i + 2, infoBlock.DarkPaletteSeq[darkRoomFadeStep][i] );
-                }
-                Graphics::UpdatePalettes();
-            }
-            else
-            {
-                state.enter.timer--;
-            }
-        }
-    }
-    else if ( state.enter.substate == EnterState::Walk )
-    {
-        if (   player->GetX() == state.enter.targetX 
-            && player->GetY() == state.enter.targetY )
-            play = true;
-        else
-            player->MoveLinear( state.enter.scrollDir, state.enter.playerSpeed );
-    }
-    else if ( state.enter.substate == EnterState::WalkCave )
-    {
-        if (   player->GetX() == state.enter.targetX 
-            && player->GetY() == state.enter.targetY )
-            play = true;
-        else
-            MovePlayer( state.enter.scrollDir, state.enter.playerSpeed, state.enter.playerFraction );
-    }
-
-    if ( play )
+    if ( state.enter.gotoPlay )
     {
         if ( IsUWMain( curRoomId ) 
             && (tempShutterDoorDir != Dir_None) 
@@ -4387,6 +4281,144 @@ void WorldImpl::UpdateEnter()
         return;
     }
     player->GetAnimator()->Advance();
+}
+
+void WorldImpl::UpdateEnter_Start()
+{
+    triggeredDoorCmd = 0;
+    triggeredDoorDir = Dir_None;
+
+    if ( IsOverworld() )
+    {
+        int row = (player->GetY() + 3 - TileMapBaseY) / TileHeight;
+        int col = player->GetX() / TileWidth;
+
+        uint8_t tileRef = tileMaps[curTileMapIndex].tileRefs[row][col];
+        if ( tileRef == Tile_Cave )
+        {
+            player->SetY( player->GetY() + TileHeight );
+            player->SetFacing( Dir_Down );
+
+            state.enter.playerFraction = 0;
+            state.enter.playerSpeed = 0x40;
+            state.enter.playerPriority = SpritePri_BelowBg;
+            state.enter.scrollDir = Dir_Up;
+            state.enter.targetX = player->GetX();
+            state.enter.targetY = player->GetY() - 0x10;
+            state.enter.substate = EnterState::WalkCave;
+
+            Sound::StopAll();
+            Sound::PlayEffect( SEffect_stairs );
+        }
+        else
+        {
+            state.enter.substate = EnterState::Wait;
+            state.enter.timer = EnterState::StateTime;
+        }
+    }
+    else if ( state.enter.scrollDir != Dir_None )
+    {
+        UWRoomAttrs& uwRoomAttrs = (UWRoomAttrs&) roomAttrs[curRoomId];
+        Direction oppositeDir = Util::GetOppositeDir( state.enter.scrollDir );
+        int door = Util::GetDirectionOrd( oppositeDir );
+        int doorType = uwRoomAttrs.GetDoor( door );
+        int distance;
+
+        if ( doorType == DoorType_Shutter || doorType == DoorType_Bombable )
+            distance = TileWidth * 2;
+        else
+            distance = TileWidth;
+
+        state.enter.targetX = player->GetX();
+        state.enter.targetY = player->GetY();
+        Util::MoveSimple( 
+            state.enter.targetX, 
+            state.enter.targetY, 
+            state.enter.scrollDir, 
+            distance );
+
+        if ( !uwRoomAttrs.IsDark() && darkRoomFadeStep > 0 )
+        {
+            state.enter.substate = EnterState::FadeIn;
+            state.enter.timer = 9;
+        }
+        else
+        {
+            state.enter.substate = EnterState::Walk;
+        }
+
+        player->SetFacing( state.enter.scrollDir );
+    }
+    else
+    {
+        state.enter.substate = EnterState::Wait;
+        state.enter.timer = EnterState::StateTime;
+    }
+
+    if ( IsUWMain( curRoomId ) )
+    {
+        doorwayDir = state.enter.scrollDir;
+        triggeredDoorDir = Util::GetOppositeDir( doorwayDir );
+        if ( GetDoorState( triggeredDoorDir ) )
+        {
+            triggeredDoorCmd = 2;
+        }
+        else
+            triggeredDoorDir = Dir_None;
+    }
+    else
+        doorwayDir = Dir_None;
+}
+
+void WorldImpl::UpdateEnter_Wait()
+{
+    state.enter.timer--;
+    if ( state.enter.timer == 0 )
+        state.enter.gotoPlay = true;
+}
+
+void WorldImpl::UpdateEnter_FadeIn()
+{
+    if ( darkRoomFadeStep == 0 )
+    {
+        state.enter.substate = EnterState::Walk;
+    }
+    else
+    {
+        if ( state.enter.timer == 0 )
+        {
+            darkRoomFadeStep--;
+            state.enter.timer = 9;
+
+            for ( int i = 0; i < 2; i++ )
+            {
+                Graphics::SetPaletteIndexed( i + 2, infoBlock.DarkPaletteSeq[darkRoomFadeStep][i] );
+            }
+            Graphics::UpdatePalettes();
+        }
+        else
+        {
+            state.enter.timer--;
+        }
+    }
+}
+
+void WorldImpl::UpdateEnter_Walk()
+{
+    if (   player->GetX() == state.enter.targetX 
+        && player->GetY() == state.enter.targetY )
+        state.enter.gotoPlay = true;
+    else
+        player->MoveLinear( state.enter.scrollDir, state.enter.playerSpeed );
+}
+
+void WorldImpl::UpdateEnter_WalkCave()
+{
+    if (   player->GetX() == state.enter.targetX 
+        && player->GetY() == state.enter.targetY )
+        state.enter.gotoPlay = true;
+    else
+        MovePlayer( state.enter.scrollDir, state.enter.playerSpeed, state.enter.playerFraction );
 }
 
 void WorldImpl::DrawEnter()
@@ -5048,93 +5080,100 @@ void WorldImpl::GotoPlayCellar()
 
 void WorldImpl::UpdatePlayCellar()
 {
-    if ( state.playCellar.substate == PlayCellarState::Start )
+    UpdateFunc update = sPlayCellarFuncs[state.playCellar.substate];
+    (this->*update)();
+}
+
+void WorldImpl::UpdatePlayCellar_Start()
+{
+    state.playCellar.substate = PlayCellarState::FadeOut;
+    state.playCellar.fadeTimer = 11;
+    state.playCellar.fadeStep = 0;
+}
+
+void WorldImpl::UpdatePlayCellar_FadeOut()
+{
+    if ( state.playCellar.fadeTimer == 0 )
     {
-        state.playCellar.substate = PlayCellarState::FadeOut;
-        state.playCellar.fadeTimer = 11;
-        state.playCellar.fadeStep = 0;
+        for ( int i = 0; i < LevelInfoBlock::FadePals; i++ )
+        {
+            int step = state.playCellar.fadeStep;
+            Graphics::SetPaletteIndexed( i + 2, infoBlock.OutOfCellarPaletteSeq[step][i] );
+        }
+        Graphics::UpdatePalettes();
+        state.playCellar.fadeTimer = 9;
+        state.playCellar.fadeStep++;
+
+        if ( state.playCellar.fadeStep == LevelInfoBlock::FadeLength )
+            state.playCellar.substate = PlayCellarState::LoadRoom;
     }
-    else if ( state.playCellar.substate == PlayCellarState::FadeOut )
+    else
     {
-        if ( state.playCellar.fadeTimer == 0 )
-        {
-            for ( int i = 0; i < LevelInfoBlock::FadePals; i++ )
-            {
-                int step = state.playCellar.fadeStep;
-                Graphics::SetPaletteIndexed( i + 2, infoBlock.OutOfCellarPaletteSeq[step][i] );
-            }
-            Graphics::UpdatePalettes();
-            state.playCellar.fadeTimer = 9;
-            state.playCellar.fadeStep++;
-
-            if ( state.playCellar.fadeStep == LevelInfoBlock::FadeLength )
-                state.playCellar.substate = PlayCellarState::LoadRoom;
-        }
-        else
-        {
-            state.playCellar.fadeTimer--;
-        }
+        state.playCellar.fadeTimer--;
     }
-    else if ( state.playCellar.substate == PlayCellarState::LoadRoom )
+}
+
+void WorldImpl::UpdatePlayCellar_LoadRoom()
+{
+    bool isLeft;
+    int roomId = FindCellarRoomId( curRoomId, isLeft );
+
+    if ( roomId >= 0 )
     {
-        bool isLeft;
-        int roomId = FindCellarRoomId( curRoomId, isLeft );
+        int x = isLeft ? 0x30 : 0xC0;
 
-        if ( roomId >= 0 )
-        {
-            int x = isLeft ? 0x30 : 0xC0;
+        LoadRoom( roomId, 0 );
 
-            LoadRoom( roomId, 0 );
+        player->SetX( x );
+        player->SetY( 0x44 );
+        player->SetFacing( Dir_Down );
 
-            player->SetX( x );
-            player->SetY( 0x44 );
-            player->SetFacing( Dir_Down );
-
-            state.playCellar.targetY = 0x60;
-            state.playCellar.substate = PlayCellarState::FadeIn;
-            state.playCellar.fadeTimer = 35;
-            state.playCellar.fadeStep = 3;
-        }
-        else
-        {
-            GotoPlay();
-        }
+        state.playCellar.targetY = 0x60;
+        state.playCellar.substate = PlayCellarState::FadeIn;
+        state.playCellar.fadeTimer = 35;
+        state.playCellar.fadeStep = 3;
     }
-    else if ( state.playCellar.substate == PlayCellarState::FadeIn )
+    else
     {
-        if ( state.playCellar.fadeTimer == 0 )
-        {
-            for ( int i = 0; i < LevelInfoBlock::FadePals; i++ )
-            {
-                int step = state.playCellar.fadeStep;
-                Graphics::SetPaletteIndexed( i + 2, infoBlock.InCellarPaletteSeq[step][i] );
-            }
-            Graphics::UpdatePalettes();
-            state.playCellar.fadeTimer = 9;
-            state.playCellar.fadeStep--;
-
-            if ( state.playCellar.fadeStep < 0 )
-                state.playCellar.substate = PlayCellarState::Walk;
-        }
-        else
-        {
-            state.playCellar.fadeTimer--;
-        }
+        GotoPlay();
     }
-    else if ( state.playCellar.substate == PlayCellarState::Walk )
-    {
-        state.playCellar.playerPriority = SpritePri_AboveBg;
+}
 
-        if ( player->GetY() == state.playCellar.targetY )
+void WorldImpl::UpdatePlayCellar_FadeIn()
+{
+    if ( state.playCellar.fadeTimer == 0 )
+    {
+        for ( int i = 0; i < LevelInfoBlock::FadePals; i++ )
         {
-            fromUnderground = 1;
-            GotoPlay( PlayState::Cellar );
+            int step = state.playCellar.fadeStep;
+            Graphics::SetPaletteIndexed( i + 2, infoBlock.InCellarPaletteSeq[step][i] );
         }
-        else
-        {
-            player->MoveLinear( Dir_Down, Player::WalkSpeed );
-            player->GetAnimator()->Advance();
-        }
+        Graphics::UpdatePalettes();
+        state.playCellar.fadeTimer = 9;
+        state.playCellar.fadeStep--;
+
+        if ( state.playCellar.fadeStep < 0 )
+            state.playCellar.substate = PlayCellarState::Walk;
+    }
+    else
+    {
+        state.playCellar.fadeTimer--;
+    }
+}
+
+void WorldImpl::UpdatePlayCellar_Walk()
+{
+    state.playCellar.playerPriority = SpritePri_AboveBg;
+
+    if ( player->GetY() == state.playCellar.targetY )
+    {
+        fromUnderground = 1;
+        GotoPlay( PlayState::Cellar );
+    }
+    else
+    {
+        player->MoveLinear( Dir_Down, Player::WalkSpeed );
+        player->GetAnimator()->Advance();
     }
 }
 
@@ -5293,55 +5332,61 @@ void WorldImpl::GotoPlayCave()
 
 void WorldImpl::UpdatePlayCave()
 {
-    if ( state.playCave.substate == PlayCaveState::Start )
+    UpdateFunc update = sPlayCaveFuncs[state.playCave.substate];
+    (this->*update)();
+}
+
+void WorldImpl::UpdatePlayCave_Start()
+{
+    state.playCave.substate = PlayCaveState::Wait;
+    state.playCave.timer = 27;
+}
+
+void WorldImpl::UpdatePlayCave_Wait()
+{
+    if ( state.playCave.timer == 0 )
+        state.playCave.substate = PlayCaveState::LoadRoom;
+    else
+        state.playCave.timer--;
+}
+
+void WorldImpl::UpdatePlayCave_LoadRoom()
+{
+    const PaletteSet* paletteSet = (PaletteSet*) extraData.GetItem( Extra_CavePalettes );
+    int caveLayout;
+
+    if ( FindSparseFlag( Sparse_Shortcut, curRoomId ) )
+        caveLayout = Cave_Shortcut;
+    else
+        caveLayout = Cave_Items;
+
+    LoadCaveRoom( caveLayout );
+
+    state.playCave.substate = PlayCaveState::Walk;
+    state.playCave.targetY = 0xD5;
+
+    player->SetX( 0x70 );
+    player->SetY( 0xDD );
+    player->SetFacing( Dir_Up );
+
+    for ( int i = 0; i < 2; i++ )
     {
-        state.playCave.substate = PlayCaveState::Wait;
-        state.playCave.timer = 27;
+        Graphics::SetPaletteIndexed( i + 2, paletteSet->Palettes[i] );
     }
-    else if ( state.playCave.substate == PlayCaveState::Wait )
+    Graphics::UpdatePalettes();
+}
+
+void WorldImpl::UpdatePlayCave_Walk()
+{
+    if ( player->GetY() == state.playCave.targetY )
     {
-        if ( state.playCave.timer == 0 )
-            state.playCave.substate = PlayCaveState::LoadRoom;
-        else
-            state.playCave.timer--;
+        fromUnderground = 1;
+        GotoPlay( PlayState::Cave );
     }
-    else if ( state.playCave.substate == PlayCaveState::LoadRoom )
+    else
     {
-        const PaletteSet* paletteSet = (PaletteSet*) extraData.GetItem( Extra_CavePalettes );
-        int caveLayout;
-
-        if ( FindSparseFlag( Sparse_Shortcut, curRoomId ) )
-            caveLayout = Cave_Shortcut;
-        else
-            caveLayout = Cave_Items;
-
-        LoadCaveRoom( caveLayout );
-
-        state.playCave.substate = PlayCaveState::Walk;
-        state.playCave.targetY = 0xD5;
-
-        player->SetX( 0x70 );
-        player->SetY( 0xDD );
-        player->SetFacing( Dir_Up );
-
-        for ( int i = 0; i < 2; i++ )
-        {
-            Graphics::SetPaletteIndexed( i + 2, paletteSet->Palettes[i] );
-        }
-        Graphics::UpdatePalettes();
-    }
-    else if ( state.playCave.substate == PlayCaveState::Walk )
-    {
-        if ( player->GetY() == state.playCave.targetY )
-        {
-            fromUnderground = 1;
-            GotoPlay( PlayState::Cave );
-        }
-        else
-        {
-            player->MoveLinear( Dir_Up, Player::WalkSpeed );
-            player->GetAnimator()->Advance();
-        }
+        player->MoveLinear( Dir_Up, Player::WalkSpeed );
+        player->GetAnimator()->Advance();
     }
 }
 

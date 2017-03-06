@@ -277,6 +277,7 @@ private:
         int         playerSpeed;
         int         playerFraction;
         SpritePriority  playerPriority;
+        bool        gotoPlay;
     };
 
     struct LoadLevelState
@@ -459,8 +460,11 @@ private:
     static UpdateFunc sModeFuncs[Modes];
     static DrawFunc sDrawFuncs[Modes];
 
+    static UpdateFunc sPlayCellarFuncs[PlayCellarState::MaxSubstate];
     static UpdateFunc sLeaveCellarFuncs[LeaveCellarState::MaxSubstate];
+    static UpdateFunc sPlayCaveFuncs[PlayCaveState::MaxSubstate];
     static UpdateFunc sScrollFuncs[ScrollState::MaxSubstate];
+    static UpdateFunc sEnterFuncs[EnterState::MaxSubstate];
     static UpdateFunc sEndLevelFuncs[EndLevelState::MaxSubstate];
     static UpdateFunc sWinGameFuncs[WinGameState::MaxSubstate];
     static UpdateFunc sDeathFuncs[DeathState::MaxSubstate];
@@ -677,6 +681,11 @@ private:
 
     void GotoEnter( Direction dir );
     void UpdateEnter();
+    void UpdateEnter_Start();
+    void UpdateEnter_Wait();
+    void UpdateEnter_FadeIn();
+    void UpdateEnter_Walk();
+    void UpdateEnter_WalkCave();
     void DrawEnter();
 
     void GotoLoadLevel( int level, bool restartOW = false );
@@ -713,6 +722,11 @@ private:
 
     void GotoPlayCellar();
     void UpdatePlayCellar();
+    void UpdatePlayCellar_Start();
+    void UpdatePlayCellar_FadeOut();
+    void UpdatePlayCellar_LoadRoom();
+    void UpdatePlayCellar_FadeIn();
+    void UpdatePlayCellar_Walk();
     void DrawPlayCellar();
 
     void UpdateLeaveCellar();
@@ -727,6 +741,10 @@ private:
 
     void GotoPlayCave();
     void UpdatePlayCave();
+    void UpdatePlayCave_Start();
+    void UpdatePlayCave_Wait();
+    void UpdatePlayCave_LoadRoom();
+    void UpdatePlayCave_Walk();
     void DrawPlayCave();
 
     void UpdateDie();
