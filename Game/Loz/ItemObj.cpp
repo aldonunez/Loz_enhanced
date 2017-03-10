@@ -1228,18 +1228,20 @@ void Fireball::Draw()
 //  Boomerang
 //----------------------------------------------------------------------------
 
-Boomerang::Boomerang( int x, int y, Direction moving, int distance, float speed, int ownerSlot )
+Boomerang::Boomerang( int x, int y, Direction moving, int distance, float speed, Object* owner )
     :   Object( Obj_Boomerang ),
         startX( x ),
         startY( y ),
         distanceTarget( distance ),
-        ownerSlot( ownerSlot ),
+        ownerRef(),
         x( x ),
         y( y ),
         leaveSpeed( speed ),
         state( 1 ),
         animTimer( 3 )
 {
+    ownerRef.Take( owner );
+
     objX = x;
     objY = y;
     facing = moving;
@@ -1350,7 +1352,7 @@ void Boomerang::UpdateLeaveSlow()
 
 void Boomerang::UpdateReturn()
 {
-    Object* owner = World::GetObject( ownerSlot );
+    Object* owner = ownerRef.Obj;
     if ( owner == nullptr || owner->GetDecoration() != 0 )
     {
         isDeleted = true;
@@ -1425,7 +1427,7 @@ void Boomerang::AdvanceAnimAndCheckCollision()
         // The original game sets animTimer to 2.
         // But the sound from the NSF doesn't sound right at that speed.
         animTimer = 11;
-        if ( ownerSlot == PlayerSlot )
+        if ( ownerRef.Obj != nullptr && ownerRef.Obj->IsPlayer() )
             Sound::PlayEffect( SEffect_boomerang );
     }
 
@@ -2584,11 +2586,11 @@ Object* MakeProjectile( ObjType type, int x, int y, Direction moving, int slot )
 }
 
 Boomerang* MakeBoomerang( 
-    int x, int y, Direction moving, int distance, float speed, int ownerSlot, int slot )
+    int x, int y, Direction moving, int distance, float speed, Object* owner, int slot )
 {
     int origSlot = World::GetCurrentObjectSlot();
     World::SetCurrentObjectSlot( slot );
-    Boomerang* boomerang = new Boomerang( x, y, moving, distance, speed, ownerSlot );
+    Boomerang* boomerang = new Boomerang( x, y, moving, distance, speed, owner );
     World::SetCurrentObjectSlot( origSlot );
     return boomerang;
 }

@@ -294,7 +294,7 @@ private:
     int             startX;
     int             startY;
     int             distanceTarget;
-    int             ownerSlot;
+    ObjRef          ownerRef;
     float           x;
     float           y;
     float           leaveSpeed;
@@ -303,7 +303,7 @@ private:
     SpriteAnimator  animator;
 
 public:
-    Boomerang( int x, int y, Direction moving, int distance, float speed, int ownerSlot );
+    Boomerang( int x, int y, Direction moving, int distance, float speed, Object* owner );
     ~Boomerang();
 
     void SetState( int state );
@@ -503,7 +503,7 @@ public:
 
 
 Boomerang* MakeBoomerang( 
-    int x, int y, Direction moving, int distance, float speed, int ownerSlot, int slot );
+    int x, int y, Direction moving, int distance, float speed, Object* owner, int slot );
 Object* MakeProjectile( ObjType type, int x, int y, Direction moving, int slot );
 Object* MakePerson( int type, const CaveSpec* spec, int x, int y );
 Object* MakeItem( int itemId, int x, int y, bool isRoomItem );

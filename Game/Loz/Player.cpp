@@ -750,7 +750,7 @@ int UseBoomerang( int x, int y, Direction facingDir )
         facingDir = moving;
 
     Boomerang* boomerang = MakeBoomerang( 
-        x, y, facingDir, distance, 3.0, PlayerSlot, BoomerangSlot );
+        x, y, facingDir, distance, 3.0, World::GetPlayer(), BoomerangSlot );
     World::SetObject( BoomerangSlot, boomerang );
     return 6;
 }

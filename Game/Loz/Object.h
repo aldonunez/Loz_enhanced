@@ -11,6 +11,7 @@
 enum CollisionResponse;
 enum ObjType;
 struct TileCollision;
+class Object;
 
 
 enum ObjInterfaces
@@ -72,14 +73,32 @@ struct ObjFlags
 };
 
 
+struct ObjRef
+{
+    Object* Obj;
+    ObjRef* Next;
+
+    ObjRef() : Obj( nullptr ), Next( nullptr ) { }
+    ~ObjRef() { Drop(); }
+
+    void Take( Object* obj );
+    void Drop();
+};
+
+
 class Object
 {
-    uint8_t     type;
+    const uint8_t   type;
 
 protected:
     bool        isDeleted;
     uint8_t     decoration;
     uint8_t     hp;
+
+private:
+    ObjRef*     firstRef;
+
+protected:
     uint8_t     invincibilityTimer;
     uint8_t     invincibilityMask;
     uint8_t     shoveDir;
@@ -129,6 +148,12 @@ public:
     virtual void Update() = 0;
     virtual void Draw() = 0;
     virtual void* GetInterface( ObjInterfaces iface );
+
+    void AddRef( ObjRef& ref );
+    void RemoveRef( ObjRef& ref );
+
+private:
+    void DeleteRefs();
 
 protected:
     int CalcPalette( int wantedPalette );

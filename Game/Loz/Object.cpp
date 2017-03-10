@@ -45,6 +45,7 @@ Object::Object( ObjType type )
     :   type( type ),
         isDeleted( false ),
         decoration( 1 ),
+        firstRef(),
         invincibilityTimer( 0 ),
         invincibilityMask( 0 ),
         shoveDir( 0 ),
@@ -74,6 +75,7 @@ Object::Object( ObjType type )
 
 Object::~Object()
 {
+    DeleteRefs();
 }
 
 ObjType Object::GetType()
@@ -1222,4 +1224,49 @@ void Object::MoveShoveWhole()
         else
             objY += distance;
     }
+}
+
+void Object::AddRef( ObjRef& ref )
+{
+    ref.Obj = this;
+    ref.Next = firstRef;
+    firstRef = &ref;
+}
+
+void Object::RemoveRef( ObjRef& ref )
+{
+    for ( ObjRef** ppRef = &firstRef; *ppRef != nullptr; ppRef = &(*ppRef)->Next )
+    {
+        if ( *ppRef == &ref )
+        {
+            *ppRef = (*ppRef)->Next;
+            ref.Next = nullptr;
+            ref.Obj = nullptr;
+            break;
+        }
+    }
+}
+
+void Object::DeleteRefs()
+{
+    for ( ObjRef* ref = firstRef; ref != nullptr; )
+    {
+        auto next = ref->Next;
+        ref->Obj = nullptr;
+        ref->Next = nullptr;
+        ref = next;
+    }
+    firstRef = nullptr;
+}
+
+void ObjRef::Take( Object* obj )
+{
+    if ( obj != nullptr )
+        obj->AddRef( *this );
+}
+
+void ObjRef::Drop()
+{
+    if ( Obj != nullptr )
+        Obj->RemoveRef( *this );
 }

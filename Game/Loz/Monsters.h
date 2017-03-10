@@ -68,7 +68,7 @@ public:
 
 class Goriya : public ChaseWalker, public IThrower
 {
-    int     shotSlot;
+    ObjRef  shotRef;
 
 public:
     Goriya( ObjType type, const WalkerSpec* spec, int x, int y );

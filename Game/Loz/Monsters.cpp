@@ -364,10 +364,11 @@ static int Shoot( ObjType shotType, int objX, int objY, Direction facing )
     Object* shot = nullptr;
     int thisSlot = World::GetCurrentObjectSlot();
     int oldActiveShots = World::GetActiveShots();
+    Object* thisPtr = World::GetObject( thisSlot );
 
     if ( shotType == Obj_Boomerang )
     {
-        shot = MakeBoomerang( objX, objY, facing, 0x51, 2.5, thisSlot, slot );
+        shot = MakeBoomerang( objX, objY, facing, 0x51, 2.5, thisPtr, slot );
     }
     else
     {
@@ -643,7 +644,7 @@ StdChaseWalker::StdChaseWalker( ObjType type, const WalkerSpec* spec, int x, int
 
 Goriya::Goriya( ObjType type, const WalkerSpec* spec, int x, int y )
     :   ChaseWalker( type, spec, x, y ),
-        shotSlot( -1 )
+        shotRef()
 {
     InitCommonFacing( objX, objY, facing );
     SetFacingAnimation();
@@ -658,7 +659,7 @@ void* Goriya::GetInterface( ObjInterfaces iface )
 
 void Goriya::Catch()
 {
-    shotSlot = -1;
+    shotRef.Drop();
 
     int r = Util::GetRandom( 256 );
     int t;
@@ -677,7 +678,7 @@ void Goriya::Update()
 {
     animator.Advance();
 
-    if ( shotSlot >= 0 )
+    if ( shotRef.Obj != nullptr )
         return;
 
     ObjMove( curSpeed );
@@ -706,7 +707,8 @@ void Goriya::TryThrowingBoomerang()
     if ( slot >= 0 )
     {
         wantToShoot = false;
-        shotSlot = slot;
+        Object* shot = World::GetObject( slot );
+        shotRef.Take( shot );
         objTimer = Util::GetRandom( 0x40 );
     }
 }
