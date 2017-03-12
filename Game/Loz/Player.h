@@ -86,4 +86,12 @@ private:
     int UseWeapon();
     int UseWeapon( ObjType type, int itemSlot );
     int UseItem();
+
+    void Move();
+    Direction CheckSubroom( Direction dir );
+    Direction CheckDoorways( Direction dir );
+    Direction CheckDoor( Direction dir, int dirOrd );
+    Direction HandleLadder( Direction dir );
+    Direction MoveOnLadder( Direction dir, int distance );
+    Direction StopAtBlock( Direction dir );
 };

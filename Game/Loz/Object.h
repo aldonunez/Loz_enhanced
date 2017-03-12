@@ -181,20 +181,23 @@ private:
     void ObjMoveFourth( int speed, Direction dir, int align );
     void MoveShoveWhole();
 
+protected:
     Direction CheckTileCollision( Direction dir );
+
+private:
     Direction FindUnblockedDir( Direction dir, int firstStep );
     Direction GetNextAltDir( int& seq, Direction dir );
 
+// TODO: Try to move these to Player.
+protected:
     Direction StopAtPersonWall( Direction dir );
     Direction StopAtPersonWallUW( Direction dir );
 
-    Direction CheckSubroom( Direction dir );
-    Direction CheckDoorways( Direction dir );
-    Direction CheckDoor( Direction dir, int dirOrd );
-    Direction HandleLadder( Direction dir );
-    Direction MoveOnLadder( Direction dir, int distance );
-    Direction StopAtBlock( Direction dir );
+private:
     void PushOWTile( TileCollision& collision );
+
+// TODO: Try to move these to Player.
+protected:
     bool HitsWorldLimit();
     void StopPlayer();
 };
@@ -289,3 +292,4 @@ struct HPAttr
 
 Direction CheckWorldMarginH( int x, Direction dir, bool adjust );
 Direction CheckWorldMarginV( int y, Direction dir, bool adjust );
+void GetFacingCoords( Object* obj, int& paralCoord, int& orthoCoord );

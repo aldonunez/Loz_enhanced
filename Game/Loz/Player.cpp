@@ -128,7 +128,7 @@ void Player::Update()
         moving &= 0xF0;
 
     if ( (state & 0xF0) != 0x10 && (state & 0xF0) != 0x20 )
-        ObjMove( speed );
+        Move();
 
     if ( World::GetMode() == Mode_LeaveCellar )
         return;
@@ -892,4 +892,385 @@ int Player::UseWeapon( ObjType type, int itemSlot )
     World::SetObject( PlayerSwordSlot, sword );
     Sound::PlayEffect( SEffect_sword );
     return 13;
+}
+
+void Player::Move()
+{
+    if ( shoveDir != 0 )
+    {
+        ObjShove();
+        return;
+    }
+
+    Direction dir = Dir_None;
+
+    if ( tileOffset == 0 )
+    {
+        if ( moving != 0 )
+        {
+            int dirOrd = Util::GetDirectionOrd( (Direction) moving );
+            dir = Util::GetOrdDirection( dirOrd );
+        }
+    }
+    else if ( moving != 0 )
+    {
+        dir = facing;
+    }
+
+    dir = (Direction) (dir & 0xF);
+
+    // blocks, personal wall, leave cellar, world margin, doorways
+    // tile collision, ladder
+
+    // Original: [$E] := 0
+    // Maybe it's only done to set up the call to FindUnblockedDir in CheckTileCollision?
+
+    // The original game resets ~moving~ here, if player's major state is $10 or $20.
+    // What we do instead in that case is to avoid calling ObjMove in Player. I think 
+    // that it's clearer this way.
+
+    dir = StopAtBlock( dir );
+    dir = StopAtPersonWallUW( dir );
+
+    if ( World::GetDoorwayDir() == Dir_None )
+    {
+        GameMode mode = World::GetMode();
+
+        if (   mode == Mode_PlayCellar 
+            || mode == Mode_PlayCave
+            || mode == Mode_PlayShortcuts )
+        {
+            dir = CheckSubroom( dir );
+            mode = World::GetMode();
+        }
+
+        if ( mode != Mode_PlayCellar )
+        {
+            if ( !World::IsOverworld() && World::GetDoorwayDir() == Dir_None )
+                dir = CheckWorldMargin( dir );
+        }
+    }
+
+    GameMode mode = World::GetMode();
+
+    if ( !World::IsOverworld()
+        && mode != Mode_PlayCellar )
+    {
+        dir = CheckDoorways( dir );
+    }
+
+    dir = CheckTileCollision( dir );
+    dir = HandleLadder( dir );
+
+    ObjMoveDir( speed, dir );
+}
+
+// 8ED7
+Direction Player::CheckSubroom( Direction dir )
+{
+    GameMode mode = World::GetMode();
+
+    if ( mode == Mode_PlayCellar )
+    {
+        if ( objY >= 0x40 || (moving & Dir_Up) == 0 )
+            return dir;
+
+        World::LeaveCellar();
+        dir = Dir_None;
+        StopPlayer();
+    }
+    else
+    {
+        dir = StopAtPersonWall( dir );
+
+        // Handling 3 shortcut stairs in shortcut cave is handled by the Person obj, instead of here.
+
+        if ( HitsWorldLimit() )
+        {
+            World::LeaveCellar();
+            dir = Dir_None;
+            StopPlayer();
+        }
+    }
+
+    return dir;
+}
+
+// $05:917C
+Direction Player::CheckDoorways( Direction dir )
+{
+    static const uint8_t orthoCoords[]  = { 0x8D, 0x8D, 0x78, 0x78 };
+    static const uint8_t minInside[]    = { 0xCF, 0x00, 0xBD, 0x3D };
+    static const uint8_t maxInside[]    = { 0xF1, 0x21, 0xDE, 0x5E };
+    static const uint8_t minOutside[]   = { 0xD2, 0x00, 0xBF, 0x3D };
+    static const uint8_t maxOutside[]   = { 0xF1, 0x1F, 0xDE, 0x5C };
+
+    int paralCoord;
+    int orthoCoord;
+    GetFacingCoords( this, paralCoord, orthoCoord );
+
+    if ( World::GetDoorwayDir() != Dir_None )
+    {
+        int dirOrd = Util::GetDirectionOrd( World::GetDoorwayDir() );
+
+        if (   paralCoord <  minInside[dirOrd] 
+            || paralCoord >= maxInside[dirOrd]
+            || World::GetDoorwayDir() != facing )
+        {
+            for ( int i = 0; i < 4; i++ )
+            {
+                if (   orthoCoord == orthoCoords[i]
+                    && paralCoord >= minOutside[i]
+                    && paralCoord <  maxOutside[i] )
+                {
+                    return CheckDoor( dir, i );
+                }
+            }
+            World::SetDoorwayDir( Dir_None );
+            return dir;
+        }
+    }
+
+    for ( int i = 0; i < 4; i++ )
+    {
+        if (   orthoCoord == orthoCoords[i]
+            && paralCoord >= minInside[i]
+            && paralCoord <  maxInside[i] )
+        {
+            return CheckDoor( dir, i );
+        }
+    }
+
+    World::SetDoorwayDir( Dir_None );
+    return dir;
+}
+
+// 8F7B
+Direction Player::HandleLadder( Direction dir )
+{
+    Player* player = World::GetPlayer();
+    Ladder* ladder = World::GetLadder();
+
+    if ( ladder == nullptr )
+        return dir;
+
+    // Original: if ladder->GetState() = 0, destroy it. But, I don't see how it can get in that state.
+
+    int distance = 0;
+
+    if ( Util::IsVertical( ladder->GetFacing() ) )
+    {
+        if ( player->GetX() != ladder->GetX() )
+        {
+            World::SetLadder( nullptr );
+            return dir;
+        }
+        distance = (player->GetY() + 3) - ladder->GetY();
+    }
+    else
+    {
+        if ( (player->GetY() + 3) != ladder->GetY() )
+        {
+            World::SetLadder( nullptr );
+            return dir;
+        }
+        distance = player->GetX() - ladder->GetX();
+    }
+
+    distance = abs( distance );
+
+    if ( distance < 0x10 )
+    {
+        ladder->SetState( 2 );
+        dir = MoveOnLadder( dir, distance );
+    }
+    else if ( distance != 0x10
+        || player->GetFacing() != ladder->GetFacing() )
+    {
+        World::SetLadder( nullptr );
+    }
+    else if ( ladder->GetState() == 1 )
+    {
+        dir = MoveOnLadder( dir, distance );
+    }
+    else
+    {
+        World::SetLadder( nullptr );
+    }
+
+    return dir;
+}
+
+// $05:8FCD
+Direction Player::MoveOnLadder( Direction dir, int distance )
+{
+    if ( moving == 0 )
+        return Dir_None;
+
+    Player* player = World::GetPlayer();
+    Ladder* ladder = World::GetLadder();
+
+    if ( distance != 0 && player->GetFacing() == ladder->GetFacing() )
+        return player->GetFacing();
+
+    if ( ladder->GetFacing() == dir )
+        return dir;
+
+    Direction oppositeDir = Util::GetOppositeDir( ladder->GetFacing() );
+
+    if ( oppositeDir == player->GetFacing() )
+        return oppositeDir;
+
+    if ( oppositeDir != Dir_Down 
+        || moving != Dir_Up )
+        return Dir_None;
+
+    // At this point, ladder faces up, and player moving up.
+
+    dir = (Direction) moving;
+
+    if ( World::CollidesWithTileMoving( objX, objY - 8, dir, true ) )
+        return Dir_None;
+
+    // ORIGINAL: The routine will run again. It'll finish, because now (ladder.facing = dir), 
+    //           which is one of the conditions that ends this function.
+    //           But, why not return dir right here?
+    return MoveOnLadder( dir, distance );
+}
+
+// $01:A13E  stop object, if too close to a block
+Direction Player::StopAtBlock( Direction dir )
+{
+    for ( int i = BufferSlot; i >= MonsterSlot1; i-- )
+    {
+        Object* obj = World::GetObject( i );
+        if ( obj != nullptr )
+        {
+            IBlocksPlayer* block = (IBlocksPlayer*) obj->GetInterface( ObjItf_IBlocksPlayer );
+            if ( block != nullptr )
+            {
+                if ( block->CheckCollision() == Collision_Blocked )
+                    return Dir_None;
+            }
+        }
+    }
+    return dir;
+}
+
+// 91D6
+Direction Player::CheckDoor( Direction dir, int dirOrd )
+{
+    Direction movingDir = (Direction) (moving & 0xF);
+
+    if ( movingDir != Util::GetOrdDirection( dirOrd ) )
+        return dir;
+
+    // At this point, moving is a cardinal direction.
+
+    DoorType    doorType = World::GetDoorType( (Direction) movingDir );
+    bool        blocked = false;
+    Player*     player = World::GetPlayer();
+
+    switch ( doorType )
+    {
+    case DoorType_Open:
+        break;
+
+    case DoorType_None:
+        blocked = true;
+        break;
+
+    case DoorType_FalseWall:
+    case DoorType_FalseWall2:
+        if ( player->GetObjectTimer() == 0 )
+        {
+            player->SetObjectTimer( 0x18 );
+            blocked = true;
+        }
+        else if ( player->GetObjectTimer() != 1 )
+        {
+            blocked = true;
+        }
+        break;
+
+    case DoorType_Bombable:
+        if ( !World::GetDoorState( movingDir ) )
+            blocked = true;
+        break;
+
+    case DoorType_Key:
+    case DoorType_Key2:
+        if ( !World::GetDoorState( movingDir ) )
+        {
+            if ( World::GetTriggeredDoorCmd() != 0 )
+            {
+                if ( player->GetObjectTimer() != 0 )
+                    blocked = true;
+                else
+                    ;
+            }
+            else
+            {
+                bool canOpen = true;
+
+                if (   World::GetItem( ItemSlot_MagicKey ) == 0 )
+                {
+                    if ( World::GetItem( ItemSlot_Keys ) == 0 )
+                        canOpen = false;
+                    else
+                        World::DecrementItem( ItemSlot_Keys );
+                }
+
+                if ( canOpen )
+                {
+                    // $8ADA
+                    World::SetTriggeredDoorDir( movingDir );
+                    World::SetTriggeredDoorCmd( 6 );
+
+                    player->SetObjectTimer( 0x20 );
+                }
+
+                blocked = true;
+            }
+        }
+        break;
+
+    case DoorType_Shutter:
+        if (    World::GetTriggeredDoorCmd() != 0 
+            || !World::GetDoorState( movingDir ) )
+        {
+            blocked = true;
+        }
+        else
+        {
+            if ( (movingDir & World::GetShuttersPassedDirs()) != 0 )
+            {
+                if ( player->GetObjectTimer() != 0 )
+                    blocked = true;
+            }
+            else
+            {
+                World::SetShuttersPassedDirs( World::GetShuttersPassedDirs() | movingDir );
+            }
+        }
+        break;
+    }
+
+    if ( blocked )
+        return dir;
+
+    facing = movingDir;
+    dir = movingDir;
+    World::SetDoorwayDir( movingDir );
+
+    if (   doorType == DoorType_FalseWall
+        || doorType == DoorType_FalseWall2
+        || doorType == DoorType_Bombable )
+    {
+        World::LeaveRoom( facing, World::GetRoomId() );
+        dir = Dir_None;
+        StopPlayer();
+    }
+
+    return dir;
 }
