@@ -181,10 +181,7 @@ private:
     void ObjMoveFourth( int speed, Direction dir, int align );
     void MoveShoveWhole();
 
-protected:
     Direction CheckTileCollision( Direction dir );
-
-private:
     Direction FindUnblockedDir( Direction dir, int firstStep );
     Direction GetNextAltDir( int& seq, Direction dir );
 
@@ -192,14 +189,6 @@ private:
 protected:
     Direction StopAtPersonWall( Direction dir );
     Direction StopAtPersonWallUW( Direction dir );
-
-private:
-    void PushOWTile( TileCollision& collision );
-
-// TODO: Try to move these to Player.
-protected:
-    bool HitsWorldLimit();
-    void StopPlayer();
 };
 
 

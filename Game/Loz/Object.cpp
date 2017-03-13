@@ -909,13 +909,6 @@ Direction Object::CheckWorldMargin( Direction dir )
 
 Direction Object::CheckTileCollision( Direction dir )
 {
-    if ( IsPlayer() )
-    {
-        if ( World::GetDoorwayDir() != Dir_None )
-            return CheckWorldBounds( dir );
-        // Original, but seemingly never triggered: if [$E] < 0, leave
-    }
-
     if ( tileOffset != 0 )
         return dir;
 
@@ -924,64 +917,20 @@ Direction Object::CheckTileCollision( Direction dir )
         return FindUnblockedDir( dir, TileCollision_CheckTile );
     }
 
-    if ( IsPlayer() )
-        return dir;
-
     // The original handles objAttr $10 here, but no object seems to have it.
 
     dir = (Direction) moving;
     return FindUnblockedDir( dir, TileCollision_NextDir );
 }
 
-bool Object::HitsWorldLimit()
-{
-    if ( moving != 0 )
-    {
-        Limits playerLimits = Player::GetPlayerLimits();
-
-        int dirOrd = Util::GetDirectionOrd( (Direction) moving );
-        Direction singleMoving = Util::GetOrdDirection( dirOrd );
-        uint coord = Util::IsVertical( singleMoving ) ? objY : objX;
-
-        if ( coord == playerLimits[dirOrd] )
-        {
-            facing = singleMoving;
-            return true;
-        }
-    }
-    return false;
-}
-
-void Object::StopPlayer()
-{
-    ((Player*) this)->Stop();
-}
-
 // F14E
 Direction Object::CheckWorldBounds( Direction dir )
 {
-    if ( IsPlayer() )
+    dir = CheckWorldMargin( dir );
+    if ( dir != Dir_None )
     {
-        if ( World::GetMode() == Mode_Play 
-            && nullptr == World::GetLadder() 
-            && tileOffset == 0 )
-        {
-            if ( HitsWorldLimit() )
-            {
-                World::LeaveRoom( facing, World::GetRoomId() );
-                dir = Dir_None;
-                StopPlayer();
-            }
-        }
-    }
-    else
-    {
-        dir = CheckWorldMargin( dir );
-        if ( dir != Dir_None )
-        {
-            facing = dir;
-            return dir;
-        }
+        facing = dir;
+        return dir;
     }
 
     return dir;
@@ -1003,25 +952,12 @@ Direction Object::FindUnblockedDir( Direction dir, int firstStep )
 
     do
     {
-        collision = World::CollidesWithTileMoving( objX, objY, dir, IsPlayer() );
+        collision = World::CollidesWithTileMoving( objX, objY, dir, false );
         if ( !collision.Collides )
         {
             dir = CheckWorldBounds( dir );
-            if ( IsPlayer() || dir != Dir_None )
+            if ( dir != Dir_None )
                 return dir;
-        }
-
-        if ( IsPlayer() )
-        {
-            if ( World::IsOverworld() )
-            {
-                PushOWTile( collision );
-            }
-            dir = Dir_None;
-            // ORIGINAL: [$F8] := 0
-            if ( World::IsOverworld() )
-                return CheckWorldBounds( dir );
-            return dir;
         }
 
         // The original handles objAttr $10 here, but no object seems to have it.
@@ -1088,16 +1024,6 @@ Direction Object::GetNextAltDir( int& seq, Direction dir )
         seq = 0;
         return Dir_None;
     }
-}
-
-// $01:A223
-void Object::PushOWTile( TileCollision& collision )
-{
-    if ( tileOffset != 0 || moving == 0 )
-        return;
-
-    // This isn't anologous to the original's code, but the effect is the same.
-    World::PushTile( collision.FineRow, collision.FineCol );
 }
 
 Direction Object::StopAtPersonWall( Direction dir )

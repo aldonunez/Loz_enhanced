@@ -1274,3 +1274,94 @@ Direction Player::CheckDoor( Direction dir, int dirOrd )
 
     return dir;
 }
+
+Direction Player::CheckTileCollision( Direction dir )
+{
+    if ( World::GetDoorwayDir() != Dir_None )
+        return CheckWorldBounds( dir );
+    // Original, but seemingly never triggered: if [$E] < 0, leave
+
+    if ( tileOffset != 0 )
+        return dir;
+
+    if ( dir != Dir_None )
+    {
+        return FindUnblockedDir( dir );
+    }
+
+    return dir;
+}
+
+bool Player::HitsWorldLimit()
+{
+    if ( moving != 0 )
+    {
+        Limits playerLimits = Player::GetPlayerLimits();
+
+        int dirOrd = Util::GetDirectionOrd( (Direction) moving );
+        Direction singleMoving = Util::GetOrdDirection( dirOrd );
+        uint coord = Util::IsVertical( singleMoving ) ? objY : objX;
+
+        if ( coord == playerLimits[dirOrd] )
+        {
+            facing = singleMoving;
+            return true;
+        }
+    }
+    return false;
+}
+
+void Player::StopPlayer()
+{
+    Stop();
+}
+
+// F14E
+Direction Player::CheckWorldBounds( Direction dir )
+{
+    if ( World::GetMode() == Mode_Play 
+        && nullptr == World::GetLadder() 
+        && tileOffset == 0 )
+    {
+        if ( HitsWorldLimit() )
+        {
+            World::LeaveRoom( facing, World::GetRoomId() );
+            dir = Dir_None;
+            StopPlayer();
+        }
+    }
+
+    return dir;
+}
+
+Direction Player::FindUnblockedDir( Direction dir )
+{
+    TileCollision collision;
+
+    collision = World::CollidesWithTileMoving( objX, objY, dir, true );
+    if ( !collision.Collides )
+    {
+        dir = CheckWorldBounds( dir );
+        return dir;
+    }
+
+    if ( World::IsOverworld() )
+    {
+        PushOWTile( collision );
+    }
+    dir = Dir_None;
+    // ORIGINAL: [$F8] := 0
+    if ( World::IsOverworld() )
+        return CheckWorldBounds( dir );
+    return dir;
+}
+
+// $01:A223
+void Player::PushOWTile( TileCollision& collision )
+{
+    if ( tileOffset != 0 || moving == 0 )
+        return;
+
+    // This isn't anologous to the original's code, but the effect is the same.
+    World::PushTile( collision.FineRow, collision.FineCol );
+}

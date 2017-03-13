@@ -94,4 +94,12 @@ private:
     Direction HandleLadder( Direction dir );
     Direction MoveOnLadder( Direction dir, int distance );
     Direction StopAtBlock( Direction dir );
+
+    Direction CheckWorldBounds( Direction dir );
+    Direction CheckTileCollision( Direction dir );
+    Direction FindUnblockedDir( Direction dir );
+
+    void PushOWTile( TileCollision& collision );
+    bool HitsWorldLimit();
+    void StopPlayer();
 };
