@@ -267,7 +267,7 @@ void Player::CheckWarp()
     World::CoverTile( fineRow, fineCol );
 }
 
-static bool IsInOuterBorder( int coord, Direction dir, const uint8_t border[] )
+static bool IsInBorder( int coord, Direction dir, const uint8_t border[] )
 {
     if ( Util::IsHorizontal( dir ) )
     {
@@ -276,22 +276,6 @@ static bool IsInOuterBorder( int coord, Direction dir, const uint8_t border[] )
     else
     {
         return coord < border[2] || coord >= border[3];
-    }
-}
-
-static bool IsInInnerBorder( int coord, Direction dir, const uint8_t border[] )
-{
-    int dirOrd = Util::GetDirectionOrd( dir );
-
-    if ( Util::IsGrowingDir( dir ) )
-    {
-        dirOrd ^= 1;
-        return coord >= border[dirOrd];
-    }
-    else
-    {
-        dirOrd ^= 1;
-        return coord < border[dirOrd];
     }
 }
 
@@ -306,7 +290,7 @@ void Player::FilterBorderInput()
     int coord = Util::IsHorizontal( facing ) ? objX : objY;
     const uint8_t* outerBorder = World::IsOverworld() ? outerBorderOW : outerBorderUW;
 
-    if ( IsInOuterBorder( coord, facing, outerBorder ) )
+    if ( IsInBorder( coord, facing, outerBorder ) )
     {
         curButtons.Buttons = 0;
         if ( !World::IsOverworld() )
@@ -317,7 +301,7 @@ void Player::FilterBorderInput()
                 moving &= HorizontalMask;
         }
     }
-    else if ( IsInInnerBorder( coord, facing, innerBorder ) )
+    else if ( IsInBorder( coord, facing, innerBorder ) )
     {
         curButtons.Mask( InputButtons::A );
     }
@@ -946,6 +930,7 @@ void Player::Move()
 
         if ( mode != Mode_PlayCellar )
         {
+            // Don't allow walking past UW walls.
             if ( !World::IsOverworld() && World::GetDoorwayDir() == Dir_None )
                 dir = CheckWorldMargin( dir );
         }
@@ -979,7 +964,7 @@ Direction Player::CheckSubroom( Direction dir )
         dir = Dir_None;
         StopPlayer();
     }
-    else
+    else    // Cave
     {
         dir = StopAtPersonWall( dir );
 
