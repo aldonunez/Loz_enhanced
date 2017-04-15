@@ -1,4 +1,5 @@
 ^\.svn/
+^\.vs/
 ^bin$
 ^Tools/ExtractLoz/bin/
 ^Tools/ExtractLoz/obj/
