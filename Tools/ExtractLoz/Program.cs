@@ -2012,6 +2012,9 @@ namespace ExtractLoz
                 byte levelNumber = reader.ReadByte();
                 writer.Write( levelNumber );
 
+                // The Overworld's effective level number is the same.
+                writer.Write( levelNumber );
+
                 reader.BaseStream.Position = OWInfoBlock + InfoBlockDrawnMapOffset;
                 byte mapOffset = reader.ReadByte();
                 writer.Write( mapOffset );
