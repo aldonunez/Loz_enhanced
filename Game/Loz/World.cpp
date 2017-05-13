@@ -205,13 +205,38 @@ const DoorStateFaces doorFaces[] =
     { 2, 0 },
 };
 
-const bool doorFaceOpen[] = 
+static const Cell doorCorners[] =
 {
-    true,
-    false,
-    false,
-    false,
-    true
+    { 0x0A, 0x1C },
+    { 0x0A, 0x02 },
+    { 0x12, 0x0F },
+    { 0x02, 0x0F },
+};
+
+static const Cell behindDoorCorners[] =
+{
+    { 0x0A, 0x1E },
+    { 0x0A, 0x00 },
+    { 0x14, 0x0F },
+    { 0x00, 0x0F },
+};
+
+struct DoorStateBehaviors
+{
+    TileBehavior Closed;
+    TileBehavior Open;
+};
+
+static const DoorStateBehaviors doorBehaviors[] =
+{
+    { TileBehavior_Doorway, TileBehavior_Doorway },     // Open
+    { TileBehavior_Wall, TileBehavior_Wall },           // Wall (None)
+    { TileBehavior_Door, TileBehavior_Door },           // False Wall
+    { TileBehavior_Door, TileBehavior_Door },           // False Wall 2
+    { TileBehavior_Door, TileBehavior_Door },           // Bombable
+    { TileBehavior_Door, TileBehavior_Doorway },        // Key
+    { TileBehavior_Door, TileBehavior_Doorway },        // Key 2
+    { TileBehavior_Door, TileBehavior_Doorway },        // Shutter
 };
 
 struct EquipValue
@@ -293,6 +318,7 @@ WorldImpl::TileBehaviorFunc WorldImpl::sBehaviorFuncs[] =
     &WorldImpl::NoneTileAction,
     &WorldImpl::NoneTileAction,
     &WorldImpl::StairsTileAction,
+    &WorldImpl::NoneTileAction,
 
     &WorldImpl::NoneTileAction,
     &WorldImpl::NoneTileAction,
@@ -329,6 +355,7 @@ WorldImpl::TileBehaviorFunc WorldImpl::sBehaviorFuncs[] =
     &WorldImpl::ArmosTileAction,
     &WorldImpl::ArmosTileAction,
     &WorldImpl::ArmosTileAction,
+    &WorldImpl::DoorTileAction,
     &WorldImpl::NoneTileAction,
 };
 
@@ -1506,10 +1533,11 @@ void WorldImpl::InteractTile( int row, int col, TileInteraction interaction )
     (this->*behaviorFunc)( row, col, interaction );
 }
 
-bool WorldImpl::CollidesTile( int row, int col )
+bool World::CollidesWall( TileBehavior behavior )
 {
-    TileBehavior behavior = (TileBehavior) tileMaps[curTileMapIndex].tileBehaviors[row][col];
-    return CollidesTile( behavior );
+    return behavior == TileBehavior_Wall
+        || behavior == TileBehavior_Doorway
+        || behavior == TileBehavior_Door;
 }
 
 bool WorldImpl::CollidesTile( TileBehavior behavior )
@@ -1566,24 +1594,17 @@ TileCollision WorldImpl::CollidesWithTile(
     }
 
     TileBehavior behavior = TileBehavior_FirstWalkable;
-    int fineRow = (y - TileMapBaseY) / 8;
-    int fineCol1 = x / 8;
-    int fineCol2;
-    int hitFineCol = fineCol1;
+    uint8_t fineRow = (y - TileMapBaseY) / 8;
+    uint8_t fineCol1 = x / 8;
+    uint8_t fineCol2;
+    uint8_t hitFineCol = fineCol1;
 
     if ( Util::IsVertical( dir ) )
         fineCol2 = (x + 8) / 8;
     else
-        fineCol2 = x / 8;
+        fineCol2 = fineCol1;
 
-    if ( !IsOverworld() && CollidesWithUWBorder( fineRow, fineCol1, fineCol2 ) )
-    {
-        // If you hit the border, then I don't think it's important to know the exact fineCol.
-        TileCollision collision = { true, TileBehavior_Wall, fineCol1, fineRow };
-        return collision;
-    }
-
-    for ( int c = fineCol1; c <= fineCol2; c++ )
+    for ( uint8_t c = fineCol1; c <= fineCol2; c++ )
     {
         TileBehavior curBehavior = GetTileBehavior( fineRow, c );
 
@@ -1601,16 +1622,45 @@ TileCollision WorldImpl::CollidesWithTile(
     return collision;
 }
 
-bool WorldImpl::CollidesWithUWBorder( int fineRow, int fineCol1, int fineCol2 )
+TileCollision World::PlayerCoversTile( int x, int y )
 {
-    if ( (fineRow >= startRow) && (fineRow  < (startRow + rowCount)) 
-        && (fineCol1 >= startCol) && (fineCol2 < (startCol + colCount)) )
-        return false;
+    return sWorld->PlayerCoversTile( x, y );
+}
 
-    // Coarse checks for collision are done here. All of the border's treated the same.
-    // Finer checks for collision are done in Player.
+TileCollision WorldImpl::PlayerCoversTile( int x, int y )
+{
+    y += 3;
 
-    return true;
+    TileBehavior behavior = TileBehavior_FirstWalkable;
+    uint8_t fineRow1 = (y - TileMapBaseY) / 8;
+    uint8_t fineRow2 = (y + 15 - TileMapBaseY) / 8;
+    uint8_t fineCol1 = x / 8;
+    uint8_t fineCol2 = (x + 15) / 8;
+    uint8_t hitFineCol = fineCol1;
+    uint8_t hitFineRow = fineRow1;
+
+    for ( uint8_t r = fineRow1; r <= fineRow2; r++ )
+    {
+        for ( uint8_t c = fineCol1; c <= fineCol2; c++ )
+        {
+            TileBehavior curBehavior = GetTileBehavior( r, c );
+
+            if ( curBehavior == TileBehavior_Water && state.play.allowWalkOnWater )
+                curBehavior = TileBehavior_GenericWalkable;
+
+            // TODO: this isn't the best way to check covered tiles
+            //       but it'll do for now.
+            if ( curBehavior > behavior )
+            {
+                behavior = curBehavior;
+                hitFineCol = c;
+                hitFineRow = r;
+            }
+        }
+    }
+
+    TileCollision collision = { false, behavior, hitFineCol, hitFineRow };
+    return collision;
 }
 
 void World::OnPushedBlock()
@@ -2114,18 +2164,28 @@ DoorType World::GetDoorType( int roomId, Direction dir )
     return (DoorType) uwRoomAttrs.GetDoor( dirOrd );
 }
 
-bool WorldImpl::GetDoorState( int door )
+bool World::GetEffectiveDoorState( int roomId, int doorDir )
 {
-    // TODO: the original game does it a little different, by looking at $EE.
-    return sWorld->GetDoorState( sWorld->curRoomId, door )
-        || (GetDoorType( (Direction) door ) == DoorType_Shutter 
-            && sWorld->tempShutters && sWorld->curRoomId == sWorld->tempShuttersRoomId)
-        || (sWorld->tempShutterDoorDir == door && sWorld->curRoomId == sWorld->tempShutterRoomId);
+    return sWorld->GetEffectiveDoorState( roomId, doorDir );
 }
 
-bool World::GetDoorState( int door )
+bool WorldImpl::GetEffectiveDoorState( int roomId, int doorDir )
 {
-    return sWorld->GetDoorState( door );
+    // TODO: the original game does it a little different, by looking at $EE.
+    return sWorld->GetDoorState( roomId, doorDir )
+        || (GetDoorType( (Direction) doorDir ) == DoorType_Shutter
+            && sWorld->tempShutters && roomId == sWorld->tempShuttersRoomId)
+        || (sWorld->tempShutterDoorDir == doorDir && roomId == sWorld->tempShutterRoomId);
+}
+
+bool WorldImpl::GetEffectiveDoorState( int doorDir )
+{
+    return GetEffectiveDoorState( sWorld->curRoomId, doorDir );
+}
+
+bool World::GetEffectiveDoorState( int doorDir )
+{
+    return sWorld->GetEffectiveDoorState( doorDir );
 }
 
 UWRoomFlags& World::GetUWRoomFlags( int curRoomId )
@@ -2263,6 +2323,15 @@ void World::OpenShutters()
     sWorld->tempShutters = true;
     sWorld->tempShuttersRoomId = sWorld->curRoomId;
     Sound::PlayEffect( SEffect_door );
+
+    for ( int i = 0; i < Doors; i++ )
+    {
+        Direction dir = Util::GetOrdDirection( i );
+        DoorType type = GetDoorType( dir );
+
+        if ( type == DoorType_Shutter )
+            sWorld->UpdateDoorTileBehavior( i );
+    }
 }
 
 void World::IncrementKilledObjectCount( bool allowBombDrop )
@@ -2631,6 +2700,14 @@ void WorldImpl::LoadMap( int roomId, int tileMapIndex )
     }
 
     LoadLayout( uniqueRoomId, tileMapIndex, tileScheme );
+
+    if ( tileScheme == TileScheme::UnderworldMain )
+    {
+        for ( int i = 0; i < Doors; i++ )
+        {
+            UpdateDoorTileBehavior( roomId, tileMapIndex, i );
+        }
+    }
 }
 
 void WorldImpl::LoadOWMob( TileMap* map, int row, int col, int mob )
@@ -2816,6 +2893,37 @@ void WorldImpl::PatchTileBehavior( int count, MobPatchCells cells, TileBehavior 
         tileMaps[curTileMapIndex].tileBehaviors[row    ][col + 1] = behavior;
         tileMaps[curTileMapIndex].tileBehaviors[row + 1][col    ] = behavior;
         tileMaps[curTileMapIndex].tileBehaviors[row + 1][col + 1] = behavior;
+    }
+}
+
+void WorldImpl::UpdateDoorTileBehavior( int doorOrd )
+{
+    return UpdateDoorTileBehavior( curRoomId, curTileMapIndex, doorOrd );
+}
+
+void WorldImpl::UpdateDoorTileBehavior( int roomId, int tileMapIndex, int doorOrd )
+{
+    TileMap*    map = &tileMaps[tileMapIndex];
+    Direction   dir = Util::GetOrdDirection( doorOrd );
+    Cell        corner = doorCorners[doorOrd];
+    DoorType    type = GetDoorType( roomId, dir );
+    bool        state = GetEffectiveDoorState( roomId, dir );
+    TileBehavior behavior = state
+        ? doorBehaviors[type].Open
+        : doorBehaviors[type].Closed;
+
+    map->tileBehaviors[corner.Row    ][corner.Col    ] = behavior;
+    map->tileBehaviors[corner.Row    ][corner.Col + 1] = behavior;
+    map->tileBehaviors[corner.Row + 1][corner.Col    ] = behavior;
+    map->tileBehaviors[corner.Row + 1][corner.Col + 1] = behavior;
+
+    if ( behavior == TileBehavior_Doorway )
+    {
+        corner = behindDoorCorners[doorOrd];
+        map->tileBehaviors[corner.Row    ][corner.Col    ] = behavior;
+        map->tileBehaviors[corner.Row    ][corner.Col + 1] = behavior;
+        map->tileBehaviors[corner.Row + 1][corner.Col    ] = behavior;
+        map->tileBehaviors[corner.Row + 1][corner.Col + 1] = behavior;
     }
 }
 
@@ -3063,7 +3171,7 @@ void WorldImpl::CheckShutters()
             Direction dir = Util::GetOrdDirection( i );
 
             if ( GetDoorType( dir ) == DoorType_Shutter 
-                && !GetDoorState( dir ) )
+                && !GetEffectiveDoorState( dir ) )
             {
                 dirs |= dir;
             }
@@ -3086,9 +3194,6 @@ void WorldImpl::UpdateDoors2()
 
     if ( (triggeredDoorCmd & 1) == 0 )
     {
-        if ( triggeredDoorCmd == 2 )
-            player->SetObjectTimer( 0x30 );
-
         triggeredDoorCmd++;
         objectTimers[DoorSlot] = 8;
     }
@@ -3122,6 +3227,7 @@ void WorldImpl::UpdateDoors2()
                     SetDoorState( nextRoomId, oppositeDir );
                     if ( type != DoorType_Bombable )
                         Sound::PlayEffect( SEffect_door );
+                    UpdateDoorTileBehavior( i );
                 }
             }
         }
@@ -4424,13 +4530,17 @@ void WorldImpl::UpdateEnter()
 
     if ( state.enter.gotoPlay )
     {
-        if ( IsUWMain( curRoomId ) 
-            && (tempShutterDoorDir != Dir_None) 
-            && GetDoorType( curRoomId, (Direction) tempShutterDoorDir ) == DoorType_Shutter )
+        Direction origShutterDoorDir = (Direction) tempShutterDoorDir;
+        tempShutterDoorDir = Dir_None;
+        if ( IsUWMain( curRoomId )
+            && (origShutterDoorDir != Dir_None)
+            && GetDoorType( curRoomId, origShutterDoorDir ) == DoorType_Shutter )
         {
             Sound::PlayEffect( SEffect_door );
+            int doorOrd = Util::GetDirectionOrd( origShutterDoorDir );
+            UpdateDoorTileBehavior( doorOrd );
         }
-        tempShutterDoorDir = Dir_None;
+
         statusBar.EnableFeatures( StatusBar::Feature_All, true );
         if ( IsOverworld() && fromUnderground != 0 )
             Sound::PlaySong( infoBlock.Song, Sound::MainSongStream, true );
@@ -4510,16 +4620,7 @@ void WorldImpl::UpdateEnter_Start()
     }
 
     if ( IsUWMain( curRoomId ) )
-    {
         doorwayDir = state.enter.scrollDir;
-        triggeredDoorDir = Util::GetOppositeDir( doorwayDir );
-        if ( GetDoorState( triggeredDoorDir ) )
-        {
-            triggeredDoorCmd = 2;
-        }
-        else
-            triggeredDoorDir = Dir_None;
-    }
     else
         doorwayDir = Dir_None;
 }
@@ -6118,6 +6219,67 @@ void WorldImpl::BlockTileAction( int row, int col, TileInteraction interaction )
     block->SetX( col * TileWidth );
     block->SetY( TileMapBaseY + row * TileHeight );
     SetBlockObj( block );
+}
+
+void WorldImpl::DoorTileAction( int row, int col, TileInteraction interaction )
+{
+    if ( interaction != TInteract_Push )
+        return;
+
+    // Based on $91D6 and old implementation Player::CheckDoor.
+
+    _RPT2( _CRT_WARN, "Push door: %d, %d\n", row, col );
+
+    DoorType    doorType = World::GetDoorType( player->GetMoving() );
+
+    switch ( doorType )
+    {
+    case DoorType_FalseWall:
+    case DoorType_FalseWall2:
+        if ( player->GetObjectTimer() == 0 )
+        {
+            player->SetObjectTimer( 0x18 );
+        }
+        else if ( player->GetObjectTimer() == 1 )
+        {
+            World::LeaveRoom( player->GetFacing(), World::GetRoomId() );
+            player->Stop();
+        }
+        break;
+
+    case DoorType_Bombable:
+        if ( World::GetEffectiveDoorState( player->GetMoving() ) )
+        {
+            World::LeaveRoom( player->GetFacing(), World::GetRoomId() );
+            player->Stop();
+        }
+        break;
+
+    case DoorType_Key:
+    case DoorType_Key2:
+        if ( triggeredDoorDir == Dir_None )
+        {
+            bool canOpen = false;
+
+            if ( World::GetItem( ItemSlot_MagicKey ) != 0 )
+            {
+                canOpen = true;
+            }
+            else if ( World::GetItem( ItemSlot_Keys ) != 0 )
+            {
+                canOpen = true;
+                World::DecrementItem( ItemSlot_Keys );
+            }
+
+            if ( canOpen )
+            {
+                // $8ADA
+                World::SetTriggeredDoorDir( player->GetMoving() );
+                World::SetTriggeredDoorCmd( 8 );
+            }
+        }
+        break;
+    }
 }
 
 

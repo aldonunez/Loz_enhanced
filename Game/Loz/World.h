@@ -178,6 +178,7 @@ public:
     static const int TileMapWidth = Columns * TileWidth;
     static const int TileMapHeight = Rows * TileHeight;
     static const int TileMapBaseY = 64;
+    static const int Doors = 4;
 
     static const int WorldLimitLeft = 0;
     static const int WorldLimitRight = TileMapWidth;
@@ -237,8 +238,10 @@ public:
     static void ChooseFile( const std::shared_ptr<ProfileSummarySnapshot>& summaries );
     static void RegisterFile( const std::shared_ptr<ProfileSummarySnapshot>& summaries );
     static void EliminateFile( const std::shared_ptr<ProfileSummarySnapshot>& summaries );
+    static bool CollidesWall( TileBehavior behavior );
     static TileCollision CollidesWithTileStill( int x, int y );
     static TileCollision CollidesWithTileMoving( int x, int y, Direction dir, bool isPlayer );
+    static TileCollision PlayerCoversTile( int x, int y );
     static void OnPushedBlock();
     static void OnActivatedArmos( int x, int y );
     static void OnTouchedPowerTriforce();
@@ -314,7 +317,8 @@ public:
     static int  GetTileAction( int tileRef );
     static DoorType GetDoorType( Direction dir );
     static DoorType GetDoorType( int roomId, Direction dir );
-    static bool GetDoorState( int door );
+    static bool GetEffectiveDoorState( int doorDir );
+    static bool GetEffectiveDoorState( int roomId, int doorDir );
     static UWRoomFlags& GetUWRoomFlags( int curRoomId );
 
     static const LevelInfoBlock* GetLevelInfo();

@@ -569,7 +569,8 @@ public:
 public:
     bool IsUWCellar( int roomId );
     void TakeShortcut();
-    bool GetDoorState( int door );
+    bool GetEffectiveDoorState( int doorDir );
+    bool GetEffectiveDoorState( int roomId, int doorDir );
 
     bool FindSparseFlag( int attrId, int roomId );
     const ObjectAttr* GetObjectAttrs();
@@ -590,8 +591,11 @@ public:
 public:
     const uint8_t* GetString( int stringId );
     TileCollision CollidesWithTile( int x, int y, Direction dir, int offset );
+    TileCollision PlayerCoversTile( int x, int y );
     void OnPushedBlock();
     void OnActivatedArmos( int x, int y );
+    void UpdateDoorTileBehavior( int roomId, int tileMapIndex, int doorOrd );
+    void UpdateDoorTileBehavior( int doorOrd );
 
 public:
     void UseRecorder();
@@ -805,8 +809,6 @@ private:
     TileBehavior GetTileBehaviorXY( int x, int y );
     void MakeActivatedObject( int type, int row, int col );
 
-    bool CollidesWithUWBorder( int fineRow, int fineCol1, int fineCol2 );
-    bool CollidesTile( int row, int col );
     bool CollidesTile( TileBehavior behavior );
     void CheckPowerTriforceFanfare();
     void AdjustInventory();
@@ -830,6 +832,7 @@ private:
     void GhostTileAction( int row, int col, TileInteraction interaction );
     void ArmosTileAction( int row, int col, TileInteraction interaction );
     void BlockTileAction( int row, int col, TileInteraction interaction );
+    void DoorTileAction( int row, int col, TileInteraction interaction );
 
     void CommonMakeObjectAction( int row, int col, TileInteraction interaction, 
         int& patchCount, MobPatchCells patchCells, ObjType objType );

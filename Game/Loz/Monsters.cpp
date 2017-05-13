@@ -3559,7 +3559,7 @@ void PolsVoice::Move()
             return;
     }
 
-    if ( collision.TileBehavior == TileBehavior_Wall )
+    if ( World::CollidesWall( collision.TileBehavior ) )
     {
         facing = Util::GetOppositeDir( facing );
 
@@ -3795,7 +3795,7 @@ static int CheckWizzrobeTileCollision( int x, int y, Direction dir )
     // This isn't quite the same as the original game, because the original contrasted 
     // blocks and water together with everything else.
 
-    if ( collision.TileBehavior == TileBehavior_Wall )
+    if ( World::CollidesWall( collision.TileBehavior ) )
         return 1;
 
     return 2;

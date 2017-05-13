@@ -136,6 +136,7 @@ void Player::Update()
     if ( World::GetWhirlwindTeleporting() == 0 )
     {
         CheckWater();
+        CheckDoorway();
         if ( World::GetMode() == Mode_Play )
             CheckWarp();
         Animate();
@@ -182,6 +183,36 @@ void Player::Animate()
     }
 }
 
+static TileCollision CollidesWithTileMovingUW( int x, int y, Direction dir )
+{
+    if ( dir == Dir_Up && y == 0x5D )
+        y -= 8;
+
+    TileCollision collision1 = World::CollidesWithTileMoving( x, y, dir, true );
+
+    if ( Util::IsHorizontal( dir ) && collision1.TileBehavior != TileBehavior_Wall )
+    {
+        TileCollision collision2 = World::CollidesWithTileMoving( x, y - 8, dir, true );
+
+        if ( collision2.TileBehavior == TileBehavior_Wall )
+            return collision2;
+    }
+
+    return collision1;
+}
+
+static TileCollision CollidesWithTileMoving( int x, int y, Direction dir )
+{
+    if ( !World::IsUWMain( World::GetRoomId() ) )
+        return World::CollidesWithTileMoving( x, y, dir, true );
+
+    TileCollision collision = CollidesWithTileMovingUW( x, y, dir );
+    if ( collision.TileBehavior == TileBehavior_Doorway )
+        collision.Collides = false;
+
+    return collision;
+}
+
 // F23C
 void Player::CheckWater()
 {
@@ -217,7 +248,7 @@ void Player::CheckWater()
         || World::GetLadder() != nullptr )
         return;
 
-    collision = World::CollidesWithTileMoving( objX, objY, facing, true );
+    collision = CollidesWithTileMoving( objX, objY, facing );
 
     // The original game checked for specific water tiles in the OW and UW.
     if ( collision.TileBehavior != TileBehavior_Water )
@@ -264,6 +295,22 @@ void Player::CheckWarp()
     int fineCol = objX / 8;
 
     World::CoverTile( fineRow, fineCol );
+}
+
+void Player::CheckDoorway()
+{
+    TileCollision collision = World::PlayerCoversTile( objX, objY );
+
+    if ( collision.TileBehavior == TileBehavior_Doorway )
+    {
+        if ( World::GetDoorwayDir() == Dir_None )
+            World::SetDoorwayDir( facing );
+    }
+    else
+    {
+        if ( World::GetDoorwayDir() != Dir_None )
+            World::SetDoorwayDir( Dir_None );
+    }
 }
 
 static bool IsInBorder( int coord, Direction dir, const uint8_t border[] )
@@ -417,7 +464,7 @@ void Player::CalcAlignedMoving()
             lastDir = dir;
             dirCount++;
 
-            TileCollision collision = World::CollidesWithTileMoving( objX, objY, dir, true );
+            TileCollision collision = CollidesWithTileMoving( objX, objY, dir );
             tileBehavior = collision.TileBehavior;
             if ( !collision.Collides )
             {
@@ -927,21 +974,10 @@ void Player::Move()
             mode = World::GetMode();
         }
 
-        if ( mode != Mode_PlayCellar )
-        {
-            // Don't allow walking past UW walls.
-            if ( !World::IsOverworld() && World::GetDoorwayDir() == Dir_None )
-                dir = CheckWorldMargin( dir );
-        }
+        // We now check walls using tiles and their behaviors.
     }
 
-    GameMode mode = World::GetMode();
-
-    if ( !World::IsOverworld()
-        && mode != Mode_PlayCellar )
-    {
-        dir = CheckDoorways( dir );
-    }
+    // We now check doorways using tiles and their behaviors.
 
     dir = CheckTileCollision( dir );
     dir = HandleLadder( dir );
@@ -977,55 +1013,6 @@ Direction Player::CheckSubroom( Direction dir )
         }
     }
 
-    return dir;
-}
-
-// $05:917C
-Direction Player::CheckDoorways( Direction dir )
-{
-    static const uint8_t orthoCoords[]  = { 0x8D, 0x8D, 0x78, 0x78 };
-    static const uint8_t minInside[]    = { 0xCF, 0x00, 0xBD, 0x3D };
-    static const uint8_t maxInside[]    = { 0xF1, 0x21, 0xDE, 0x5E };
-    static const uint8_t minOutside[]   = { 0xD2, 0x00, 0xBF, 0x3D };
-    static const uint8_t maxOutside[]   = { 0xF1, 0x1F, 0xDE, 0x5C };
-
-    int paralCoord;
-    int orthoCoord;
-    GetFacingCoords( this, paralCoord, orthoCoord );
-
-    if ( World::GetDoorwayDir() != Dir_None )
-    {
-        int dirOrd = Util::GetDirectionOrd( World::GetDoorwayDir() );
-
-        if (   paralCoord <  minInside[dirOrd] 
-            || paralCoord >= maxInside[dirOrd]
-            || World::GetDoorwayDir() != facing )
-        {
-            for ( int i = 0; i < 4; i++ )
-            {
-                if (   orthoCoord == orthoCoords[i]
-                    && paralCoord >= minOutside[i]
-                    && paralCoord <  maxOutside[i] )
-                {
-                    return CheckDoor( dir, i );
-                }
-            }
-            World::SetDoorwayDir( Dir_None );
-            return dir;
-        }
-    }
-
-    for ( int i = 0; i < 4; i++ )
-    {
-        if (   orthoCoord == orthoCoords[i]
-            && paralCoord >= minInside[i]
-            && paralCoord <  maxInside[i] )
-        {
-            return CheckDoor( dir, i );
-        }
-    }
-
-    World::SetDoorwayDir( Dir_None );
     return dir;
 }
 
@@ -1113,7 +1100,7 @@ Direction Player::MoveOnLadder( Direction dir, int distance )
 
     dir = (Direction) moving;
 
-    if ( World::CollidesWithTileMoving( objX, objY - 8, dir, true ) )
+    if ( CollidesWithTileMoving( objX, objY - 8, dir ) )
         return Dir_None;
 
     // ORIGINAL: The routine will run again. It'll finish, because now (ladder.facing = dir), 
@@ -1138,124 +1125,6 @@ Direction Player::StopAtBlock( Direction dir )
             }
         }
     }
-    return dir;
-}
-
-// 91D6
-Direction Player::CheckDoor( Direction dir, int dirOrd )
-{
-    Direction movingDir = (Direction) (moving & 0xF);
-
-    if ( movingDir != Util::GetOrdDirection( dirOrd ) )
-        return dir;
-
-    // At this point, moving is a cardinal direction.
-
-    DoorType    doorType = World::GetDoorType( (Direction) movingDir );
-    bool        blocked = false;
-    Player*     player = World::GetPlayer();
-
-    switch ( doorType )
-    {
-    case DoorType_Open:
-        break;
-
-    case DoorType_None:
-        blocked = true;
-        break;
-
-    case DoorType_FalseWall:
-    case DoorType_FalseWall2:
-        if ( player->GetObjectTimer() == 0 )
-        {
-            player->SetObjectTimer( 0x18 );
-            blocked = true;
-        }
-        else if ( player->GetObjectTimer() != 1 )
-        {
-            blocked = true;
-        }
-        break;
-
-    case DoorType_Bombable:
-        if ( !World::GetDoorState( movingDir ) )
-            blocked = true;
-        break;
-
-    case DoorType_Key:
-    case DoorType_Key2:
-        if ( !World::GetDoorState( movingDir ) )
-        {
-            if ( World::GetTriggeredDoorCmd() != 0 )
-            {
-                if ( player->GetObjectTimer() != 0 )
-                    blocked = true;
-                else
-                    ;
-            }
-            else
-            {
-                bool canOpen = true;
-
-                if (   World::GetItem( ItemSlot_MagicKey ) == 0 )
-                {
-                    if ( World::GetItem( ItemSlot_Keys ) == 0 )
-                        canOpen = false;
-                    else
-                        World::DecrementItem( ItemSlot_Keys );
-                }
-
-                if ( canOpen )
-                {
-                    // $8ADA
-                    World::SetTriggeredDoorDir( movingDir );
-                    World::SetTriggeredDoorCmd( 6 );
-
-                    player->SetObjectTimer( 0x20 );
-                }
-
-                blocked = true;
-            }
-        }
-        break;
-
-    case DoorType_Shutter:
-        if (    World::GetTriggeredDoorCmd() != 0 
-            || !World::GetDoorState( movingDir ) )
-        {
-            blocked = true;
-        }
-        else
-        {
-            if ( (movingDir & World::GetShuttersPassedDirs()) != 0 )
-            {
-                if ( player->GetObjectTimer() != 0 )
-                    blocked = true;
-            }
-            else
-            {
-                World::SetShuttersPassedDirs( World::GetShuttersPassedDirs() | movingDir );
-            }
-        }
-        break;
-    }
-
-    if ( blocked )
-        return dir;
-
-    facing = movingDir;
-    dir = movingDir;
-    World::SetDoorwayDir( movingDir );
-
-    if (   doorType == DoorType_FalseWall
-        || doorType == DoorType_FalseWall2
-        || doorType == DoorType_Bombable )
-    {
-        World::LeaveRoom( facing, World::GetRoomId() );
-        dir = Dir_None;
-        StopPlayer();
-    }
-
     return dir;
 }
 
@@ -1322,17 +1191,15 @@ Direction Player::FindUnblockedDir( Direction dir )
 {
     TileCollision collision;
 
-    collision = World::CollidesWithTileMoving( objX, objY, dir, true );
+    collision = CollidesWithTileMoving( objX, objY, dir );
     if ( !collision.Collides )
     {
         dir = CheckWorldBounds( dir );
         return dir;
     }
 
-    if ( World::IsOverworld() )
-    {
-        PushOWTile( collision );
-    }
+    PushOWTile( collision );
+
     dir = Dir_None;
     // ORIGINAL: [$F8] := 0
     if ( World::IsOverworld() )

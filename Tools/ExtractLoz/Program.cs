@@ -1053,12 +1053,14 @@ namespace ExtractLoz
             SlowStairs,
             Stairs,
 
+            Doorway,
             Water,
             GenericSolid,
             Cave,
             Ghost0,
             Armos0 = Ghost0 + 16,
-            Wall = Armos0 + 16,
+            Door = Armos0 + 16,
+            Wall,
         }
 
         private static void ExtractOverworldTileBehaviors( Options options, BinaryReader reader )

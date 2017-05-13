@@ -83,6 +83,7 @@ private:
     void CalcAlignedMoving();
     void CheckWater();
     void CheckWarp();
+    void CheckDoorway();
     void Animate();
 
     int UseWeapon();
@@ -91,8 +92,6 @@ private:
 
     void Move();
     Direction CheckSubroom( Direction dir );
-    Direction CheckDoorways( Direction dir );
-    Direction CheckDoor( Direction dir, int dirOrd );
     Direction HandleLadder( Direction dir );
     Direction MoveOnLadder( Direction dir, int distance );
     Direction StopAtBlock( Direction dir );

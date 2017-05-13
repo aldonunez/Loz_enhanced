@@ -15,6 +15,7 @@ enum TileBehavior : uint8_t
     TileBehavior_SlowStairs,
     TileBehavior_Stairs,
 
+    TileBehavior_Doorway,
     TileBehavior_Water,
     TileBehavior_GenericSolid,
     TileBehavior_Cave,
@@ -50,10 +51,11 @@ enum TileBehavior : uint8_t
     TileBehavior_ArmosD,
     TileBehavior_ArmosE,
     TileBehavior_ArmosF,
+    TileBehavior_Door,
     TileBehavior_Wall,
 
     TileBehavior_Max,
 
     TileBehavior_FirstWalkable = TileBehavior_GenericWalkable,
-    TileBehavior_FirstSolid = TileBehavior_Water,
+    TileBehavior_FirstSolid = TileBehavior_Doorway,
 };

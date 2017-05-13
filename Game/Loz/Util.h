@@ -376,6 +376,11 @@ inline Direction operator ^( Direction left, Direction right )
     return (Direction) ((unsigned int) left ^ (unsigned int) right);
 }
 
+inline Direction& operator |=( Direction& left, Direction right )
+{
+    return left = left | right;
+}
+
 inline uint abs( uint a )
 {
     return abs( (int) a );
