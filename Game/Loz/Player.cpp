@@ -71,7 +71,7 @@ Player::Player()
     :   Object( Obj_Player ),
         state( 0 ),
         speed( WalkSpeed ),
-        tileRef( 0 ),
+        tileBehavior(),
         paralyzed( false ),
         animTimer( 0 ),
         avoidTurningWhenDiag( 0 ),
@@ -220,8 +220,7 @@ void Player::CheckWater()
     collision = World::CollidesWithTileMoving( objX, objY, facing, true );
 
     // The original game checked for specific water tiles in the OW and UW.
-    int action = World::GetTileAction( collision.TileRef );
-    if ( action != TileAction_Ladder )
+    if ( collision.TileBehavior != TileBehavior_Water )
         return;
 
     if ( moving == 0 )
@@ -419,7 +418,7 @@ void Player::CalcAlignedMoving()
             dirCount++;
 
             TileCollision collision = World::CollidesWithTileMoving( objX, objY, dir, true );
-            tileRef = collision.TileRef;
+            tileBehavior = collision.TileBehavior;
             if ( !collision.Collides )
             {
                 lastClearDir = dir;
@@ -497,7 +496,7 @@ void Player::SetSpeed()
 
     if ( World::IsOverworld() )
     {
-        if ( tileRef == Tile_HiStairs )
+        if ( tileBehavior == TileBehavior_SlowStairs )
         {
             newSpeed = StairsSpeed;
             if ( speed != newSpeed )

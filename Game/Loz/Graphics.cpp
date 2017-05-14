@@ -14,6 +14,12 @@
 const int PaletteBmpWidth = Util::Max( PaletteLength, 16 );
 const int PaletteBmpHeight = Util::Max( PaletteCount, 16 );
 
+enum
+{
+    TileWidth   = 8,
+    TileHeight  = 8,
+};
+
 
 ALLEGRO_BITMAP* tileSheets[Sheet_Max];
 ALLEGRO_BITMAP* paletteBmp;
@@ -360,6 +366,37 @@ void Graphics::DrawTile(
         destX,
         destY,
         flags );
+}
+
+void Graphics::DrawStripSprite16x16(
+    int slot,
+    int firstTile,
+    int destX,
+    int destY,
+    int palette
+)
+{
+    static const uint8_t offsetsX[4] = { 0, 0, 8, 8 };
+    static const uint8_t offsetsY[4] = { 0, 8, 0, 8 };
+    int tileRef = firstTile;
+
+    for ( int i = 0; i < 4; i++ )
+    {
+        int srcX = (tileRef & 0x0F) * TileWidth;
+        int srcY = ((tileRef & 0xF0) >> 4) * TileHeight;
+        tileRef++;
+
+        DrawTile(
+            slot,
+            srcX,
+            srcY,
+            TileWidth,
+            TileHeight,
+            destX + offsetsX[i],
+            destY + offsetsY[i],
+            palette,
+            0 );
+    }
 }
 
 void Graphics::SetViewParams( float scale, float x, float y )

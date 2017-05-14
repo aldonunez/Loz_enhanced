@@ -1674,10 +1674,10 @@ void Zora::Update()
         if ( objTimer == 1 )
         {
             Player* player = World::GetPlayer();
-            Point p = World::GetRandomWaterTile();
+            Cell cell = World::GetRandomWaterTile();
 
-            objX = p.X * World::TileWidth;
-            objY = p.Y * World::TileHeight - 3;
+            objX = cell.Col * World::TileWidth;
+            objY = cell.Row * World::TileHeight - 3;
 
             if ( player->GetY() >= objY )
                 facing = Dir_Down;
@@ -3559,7 +3559,7 @@ void PolsVoice::Move()
             return;
     }
 
-    if ( collision.TileRef == Tile_Wall )
+    if ( collision.TileBehavior == TileBehavior_Wall )
     {
         facing = Util::GetOppositeDir( facing );
 
@@ -3795,7 +3795,7 @@ static int CheckWizzrobeTileCollision( int x, int y, Direction dir )
     // This isn't quite the same as the original game, because the original contrasted 
     // blocks and water together with everything else.
 
-    if ( collision.TileRef == Tile_Wall )
+    if ( collision.TileBehavior == TileBehavior_Wall )
         return 1;
 
     return 2;

@@ -127,6 +127,66 @@ namespace Util
 
 
     template <typename T>
+    class List : public ResourceLoader
+    {
+        uint16_t    length;
+        T*          items;
+
+    public:
+        List()
+            : length( 0 ),
+            items( nullptr )
+        {
+        }
+
+        ~List()
+        {
+            Free();
+        }
+
+        virtual bool Load( FILE* file, size_t fileSize ) override
+        {
+            assert( file != nullptr );
+            Free();
+
+            uint16_t len16;
+            int size = fileSize - sizeof len16;
+
+            uint8_t* buffer = new uint8_t[size];
+            if ( buffer == nullptr )
+                return false;
+
+            fread( &len16, sizeof len16, 1, file );
+            fread( buffer, size, 1, file );
+
+            length = len16;
+            items = (T*) buffer;
+
+            return true;
+        }
+
+        const T* GetItems()
+        {
+            return items;
+        }
+
+        uint16_t GetLength()
+        {
+            return length;
+        }
+
+    private:
+        void Free()
+        {
+            if ( items != nullptr )
+            {
+                delete[] items;
+            }
+        }
+    };
+
+
+    template <typename T>
     class Table : public ResourceLoader
     {
         size_t      length;
@@ -135,7 +195,8 @@ namespace Util
 
     public:
         Table()
-            :   offsets( nullptr ),
+            :   length( 0 ),
+                offsets( nullptr ),
                 heap( nullptr )
         {
         }

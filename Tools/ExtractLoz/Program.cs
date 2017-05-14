@@ -380,16 +380,40 @@ namespace ExtractLoz
             {
                 Bitmap bmp = new Bitmap( 16 * 16, 4 * 16 );
 
-                ExtractUnderworldCellarTilesImpl( reader, bmp );
+                ExtractUnderworldCellarTilesDebug( reader, bmp );
 
-                bmp.Save( options.MakeOutPath( "underworldCellarTiles.png" ), ImageFormat.Png );
+                bmp.Save( options.MakeOutPath( "underworldCellarTilesDebug.png" ), ImageFormat.Png );
+
+                ExtractUnderworldCellarMobs( options, reader );
             }
         }
 
         const int UWCellarPrimarySquareTable = 0x1697C + 16;
         const int UWCellarSecondarySquareTable = 0x169B4 + 16;
 
-        private static void ExtractUnderworldCellarTilesImpl( BinaryReader reader, Bitmap bmp )
+        private static void ExtractUnderworldCellarMobs( Options options, BinaryReader reader )
+        {
+            reader.BaseStream.Position = UWCellarPrimarySquareTable;
+            var primaries = reader.ReadBytes( 56 );
+
+            for ( int i = 0; i < 16; i++ )
+            {
+                primaries[i] = 0xFF;
+            }
+
+            // We don't need to translate secrets into primaries.
+
+            var filePath = options.MakeOutPath( "uwCellarPrimaryMobs.list" );
+            WriteListFile( filePath, primaries );
+
+            reader.BaseStream.Position = UWCellarSecondarySquareTable;
+            var secondaries = reader.ReadBytes( 16 * 4 );       // 16 squares, 4 8x8 tiles each
+
+            filePath = options.MakeOutPath( "uwCellarSecondaryMobs.list" );
+            WriteListFile( filePath, secondaries );
+        }
+
+        private static void ExtractUnderworldCellarTilesDebug( BinaryReader reader, Bitmap bmp )
         {
             reader.BaseStream.Position = UWCellarPrimarySquareTable;
             var primaries = reader.ReadBytes( 56 );
@@ -445,7 +469,14 @@ namespace ExtractLoz
             {
                 Bitmap bmp = new Bitmap( 16 * 16, 4 * 16 );
 
-                ExtractUnderworldTilesImpl( reader, bmp );
+                ExtractUnderworldTilesDebug( reader, bmp );
+
+                bmp.Save( options.MakeOutPath( "underworldTilesDebug.png" ), ImageFormat.Png );
+                bmp.Dispose();
+
+                bmp = new Bitmap( 16 * 8, 16 * 8 );
+
+                ExtractUnderworldTiles( reader, bmp );
 
                 bmp.Save( options.MakeOutPath( "underworldTiles.png" ), ImageFormat.Png );
                 bmp.Dispose();
@@ -463,10 +494,22 @@ namespace ExtractLoz
 
                 bmp.Save( options.MakeOutPath( "underworldDoors.png" ), ImageFormat.Png );
                 bmp.Dispose();
+
+                ExtractUnderworldMobs( options, reader );
+                ExtractUnderworldTileBehaviors( options, reader );
             }
         }
 
-        private static void ExtractUnderworldTilesImpl( BinaryReader reader, Bitmap bmp )
+        private static void ExtractUnderworldMobs( Options options, BinaryReader reader )
+        {
+            reader.BaseStream.Position = UnderworldSquareTable;
+            var primaries = reader.ReadBytes( 8 );
+
+            var filePath = options.MakeOutPath( "uwPrimaryMobs.list" );
+            WriteListFile( filePath, primaries );
+        }
+
+        private static void ExtractUnderworldTilesDebug( BinaryReader reader, Bitmap bmp )
         {
             reader.BaseStream.Position = UnderworldSquareTable;
             var primaries = reader.ReadBytes( 8 );
@@ -506,12 +549,24 @@ namespace ExtractLoz
             }
         }
 
+        private static void ExtractUnderworldTiles( BinaryReader reader, Bitmap bmp )
+        {
+            Color[] colors = GetPaletteStandInColors();
+
+            for ( int t = 0; t < 256; t++ )
+            {
+                SeekBgTile( reader, UWTileCHR, t );
+                DrawTile( reader, bmp, colors, (t % 16) * 8, (t / 16) * 8 );
+            }
+        }
+
+        const int Walls = 0x15fa0 + 16;
+        const int WallTileCount = 78;
+
         private static void ExtractUnderworldWalls( BinaryReader reader, Bitmap bmp )
         {
-            const int Walls = 0x15fa0 + 16;
-
             reader.BaseStream.Position = Walls;
-            var wallTiles = reader.ReadBytes( 78 );
+            var wallTiles = reader.ReadBytes( WallTileCount );
 
             var colors = GetPaletteStandInColors();
             int row = 0;
@@ -730,13 +785,52 @@ namespace ExtractLoz
             {
                 Bitmap bmp = new Bitmap( 16 * 16, 4 * 16 );
 
-                ExtractTiles( reader, bmp );
+                ExtractOverworldTilesDebug( reader, bmp );
 
+                bmp.Save( options.MakeOutPath( "overworldTilesDebug.png" ), ImageFormat.Png );
+                bmp.Dispose();
+
+                bmp = new Bitmap( 16 * 8, 16 * 8 );
+                ExtractOverworldTiles( reader, bmp );
                 bmp.Save( options.MakeOutPath( "overworldTiles.png" ), ImageFormat.Png );
+                bmp.Dispose();
+
+                ExtractOverworldMobs( options, reader );
+                ExtractOverworldTileBehaviors( options, reader );
             }
         }
 
-        private static void ExtractTiles( BinaryReader reader, Bitmap bmp )
+        private static void ExtractOverworldMobs( Options options, BinaryReader reader )
+        {
+            reader.BaseStream.Position = PrimarySquareTable;
+            var primaries = reader.ReadBytes( 56 );
+
+            reader.BaseStream.Position = SecretSquareTable;
+            var secrets = reader.ReadBytes( 6 );                // 1 byte refs to primary squares
+
+            for ( int i = 0; i < 16; i++ )
+            {
+                primaries[i] = 0xFF;
+            }
+
+            for ( int i = 16; i < 56; i++ )
+            {
+                int primary = primaries[i];
+                if ( primary >= 0xE5 && primary <= 0xEA )
+                    primaries[i] = secrets[primary - 0xE5];
+            }
+
+            var filePath = options.MakeOutPath( "owPrimaryMobs.list" );
+            WriteListFile( filePath, primaries );
+
+            reader.BaseStream.Position = SecondarySquareTable;
+            var secondaries = reader.ReadBytes( 16 * 4 );       // 16 squares, 4 8x8 tiles each
+
+            filePath = options.MakeOutPath( "owSecondaryMobs.list" );
+            WriteListFile( filePath, secondaries );
+        }
+
+        private static void ExtractOverworldTilesDebug( BinaryReader reader, Bitmap bmp )
         {
             reader.BaseStream.Position = PrimarySquareTable;
             var primaries = reader.ReadBytes( 56 );
@@ -760,29 +854,9 @@ namespace ExtractLoz
 
             for ( int i = 0; i < 56; i++ )
             {
-                if ( i < 16 )
-                {
-                    var primary = i * 4;
+                GetOverworldMobTiles( i, primaries, secondaries, secrets, tileIndexes );
 
-                    for ( int j = 0; j < 4; j++ )
-                        tileIndexes[j] = secondaries[primary + j];
-
-                    DrawBgSquare( reader, bmp, colors, x, y, OWTileCHR, tileIndexes );
-                }
-                else
-                {
-                    var primary = primaries[i];
-
-                    if ( primary >= 0xE5 && primary <= 0xEA )
-                    {
-                        primary = secrets[primary - 0xE5];
-                    }
-
-                    for ( int j = 0; j < 4; j++ )
-                        tileIndexes[j] = (byte) (primary + j);
-
-                    DrawBgSquare( reader, bmp, colors, x, y, OWTileCHR, tileIndexes );
-                }
+                DrawBgSquare( reader, bmp, colors, x, y, OWTileCHR, tileIndexes );
 
                 if ( (i % 16) == 15 )
                 {
@@ -791,6 +865,41 @@ namespace ExtractLoz
                 }
                 else
                     x += 16;
+            }
+        }
+
+        private static void GetOverworldMobTiles( 
+            int i, byte[] primaries, byte[] secondaries, byte[] secrets, byte[] tileIndexes )
+        {
+            if ( i < 16 )
+            {
+                var primary = i * 4;
+
+                for ( int j = 0; j < 4; j++ )
+                    tileIndexes[j] = secondaries[primary + j];
+            }
+            else
+            {
+                var primary = primaries[i];
+
+                if ( primary >= 0xE5 && primary <= 0xEA )
+                {
+                    primary = secrets[primary - 0xE5];
+                }
+
+                for ( int j = 0; j < 4; j++ )
+                    tileIndexes[j] = (byte) (primary + j);
+            }
+        }
+
+        private static void ExtractOverworldTiles( BinaryReader reader, Bitmap bmp )
+        {
+            Color[] colors = GetPaletteStandInColors();
+
+            for ( int t = 0; t < 256; t++ )
+            {
+                SeekBgTile( reader, OWTileCHR, t );
+                DrawTile( reader, bmp, colors, (t % 16) * 8, (t / 16) * 8 );
             }
         }
 
@@ -935,6 +1044,101 @@ namespace ExtractLoz
             }
         }
 
+        enum TileBehavior
+        {
+            None = -1,
+
+            GenericWalkable,
+            Sand,
+            SlowStairs,
+            Stairs,
+
+            Water,
+            GenericSolid,
+            Cave,
+            Ghost0,
+            Armos0 = Ghost0 + 16,
+            Wall = Armos0 + 16,
+        }
+
+        private static void ExtractOverworldTileBehaviors( Options options, BinaryReader reader )
+        {
+            reader.BaseStream.Position = PrimarySquareTable;
+            var primaries = reader.ReadBytes( 56 );
+
+            reader.BaseStream.Position = SecondarySquareTable;
+            var secondaries = reader.ReadBytes( 16 * 4 );       // 16 squares, 4 8x8 tiles each
+
+            reader.BaseStream.Position = SecretSquareTable;
+            var secrets = reader.ReadBytes( 6 );                // 1 byte refs to primary squares
+
+            var tileToBehaviorMap = new byte[256];
+
+            for ( int i = 0; i < 256; i++ )
+            {
+                if ( IsWalkable( i ) )
+                    tileToBehaviorMap[i] = (byte) TileBehavior.GenericWalkable;
+                else
+                    tileToBehaviorMap[i] = (byte) TileBehavior.GenericSolid;
+            }
+
+            byte[] tileIndexes = new byte[4];
+
+            for ( int i = 0; i < 56; i++ )
+            {
+                TileBehavior behavior = TileBehavior.None;
+                var action = GetAction( i );
+                GetOverworldMobTiles( i, primaries, secondaries, secrets, tileIndexes );
+
+                if ( action == TileAction.Ladder )
+                    behavior = TileBehavior.Water;
+                else if ( action == TileAction.Cave )
+                    behavior = TileBehavior.Cave;
+                else if ( action == TileAction.Stairs )
+                    behavior = TileBehavior.Stairs;
+                else if ( action == TileAction.Ghost )
+                    behavior = TileBehavior.Ghost0;
+                else if ( action == TileAction.Armos )
+                    behavior = TileBehavior.Armos0;
+                else
+                    continue;
+
+                bool different = false;
+
+                for ( int j = 1; j < 4; j++ )
+                {
+                    different = IsWalkable( tileIndexes[0] ) ^ IsWalkable( tileIndexes[j] );
+                    if ( different )
+                        break;
+                }
+
+                for ( int j = 0; j < 4; j++ )
+                {
+                    int t = tileIndexes[j];
+                    if ( !different || !IsWalkable( t ) )
+                    {
+                        tileToBehaviorMap[t] = (byte) behavior;
+                    }
+                }
+            }
+
+            tileToBehaviorMap[0x74] = (byte) TileBehavior.SlowStairs;
+            tileToBehaviorMap[0x75] = (byte) TileBehavior.SlowStairs;
+
+            tileToBehaviorMap[0x84] = (byte) TileBehavior.Sand;
+            tileToBehaviorMap[0x85] = (byte) TileBehavior.Sand;
+            tileToBehaviorMap[0x86] = (byte) TileBehavior.Sand;
+            tileToBehaviorMap[0x87] = (byte) TileBehavior.Sand;
+
+            // For stairs, only treat the top left corner specially.
+            tileToBehaviorMap[0x71] = (byte) TileBehavior.GenericWalkable;
+            tileToBehaviorMap[0x72] = (byte) TileBehavior.GenericWalkable;
+            tileToBehaviorMap[0x73] = (byte) TileBehavior.GenericWalkable;
+
+            string outPath = options.MakeOutPath( "owTileBehaviors.dat" );
+            File.WriteAllBytes( outPath, tileToBehaviorMap );
+        }
+
         private static bool IsUnderworldWalkable( int t )
         {
             if ( t < 0x78 )
@@ -1073,6 +1277,70 @@ namespace ExtractLoz
 
                 Utility.PadStream( writer.BaseStream );
             }
+        }
+
+        private static void ExtractUnderworldTileBehaviors( Options options, BinaryReader reader )
+        {
+            var tileToBehaviorMap = new byte[256];
+
+            for ( int i = 0; i < 256; i++ )
+            {
+                if ( IsUnderworldWalkable( i ) )
+                    tileToBehaviorMap[i] = (byte) TileBehavior.GenericWalkable;
+                else
+                    tileToBehaviorMap[i] = (byte) TileBehavior.GenericSolid;
+            }
+
+            reader.BaseStream.Position = Walls;
+            var wallTiles = reader.ReadBytes( WallTileCount );
+
+            for ( int i = 0; i < WallTileCount; i++ )
+            {
+                int tile = wallTiles[i];
+                if ( tile == 0 )
+                    continue;
+
+                tileToBehaviorMap[tile] = (byte) TileBehavior.Wall;
+
+                tile = wallTiles[i];
+                if ( tile != 0xf5 && tile != 0xde )
+                    tile++;
+                tileToBehaviorMap[tile] = (byte) TileBehavior.Wall;
+
+                tile = wallTiles[i];
+                if ( tile == 0xde || tile == 0xdc )
+                    tile++;
+                else if ( tile != 0xf5 && tile != 0xe0 )
+                    tile += 2;
+                tileToBehaviorMap[tile] = (byte) TileBehavior.Wall;
+
+                tile = wallTiles[i];
+                if ( tile == 0xde || tile == 0xe0 )
+                    tile++;
+                else if ( tile != 0xf5 && tile != 0xdc )
+                    tile += 3;
+                tileToBehaviorMap[tile] = (byte) TileBehavior.Wall;
+            }
+
+            // Door frames
+            for ( int i = 0x78; i < 0x8C; i++ )
+            {
+                tileToBehaviorMap[i] = (byte) TileBehavior.Wall;
+            }
+
+            // $8C - $93 are bombed holes in the wall.
+            // $98 - $A7 are key doors.
+            // $A8 - $AF are shutters.
+
+            tileToBehaviorMap[0xF6] = (byte) TileBehavior.Wall;
+
+            tileToBehaviorMap[0xF4] = (byte) TileBehavior.Water;
+
+            // For stairs, only treat the top left corner specially.
+            tileToBehaviorMap[0x70] = (byte) TileBehavior.Stairs;
+
+            string outPath = options.MakeOutPath( "uwTileBehaviors.dat" );
+            File.WriteAllBytes( outPath, tileToBehaviorMap );
         }
 
         const int OWRoomCols = 0x15418 + 16;
@@ -3146,6 +3414,15 @@ namespace ExtractLoz
         {
             var asm = System.Reflection.Assembly.GetExecutingAssembly();
             return asm.GetManifestResourceStream( name );
+        }
+
+        private static void WriteListFile( string path, byte[] items )
+        {
+            using ( var writer = new BinaryWriter( Utility.TruncateFile( path ) ) )
+            {
+                writer.Write( (ushort) items.Length );
+                writer.Write( items );
+            }
         }
     }
 }

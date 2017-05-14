@@ -141,8 +141,9 @@ const float BlockSpeed = 0.5;
 struct BlockSpec
 {
     uint8_t blockTile;
-    uint8_t floorTile1;
-    uint8_t floorTile2;
+    uint8_t blockMob;
+    uint8_t floorMob1;
+    uint8_t floorMob2;
     uint8_t timerLimit;
     bool    allowHorizontal;
 };
@@ -150,8 +151,9 @@ struct BlockSpec
 BlockSpec rockSpec = 
 {
     Tile_Rock,
-    Tile_Ground,
-    Tile_Ground,
+    Mob_Rock,
+    Mob_Ground,
+    Mob_Ground,
     1,
     false
 };
@@ -159,8 +161,9 @@ BlockSpec rockSpec =
 BlockSpec headstoneSpec = 
 {
     Tile_Headstone,
-    Tile_Ground,
-    Tile_Stairs,
+    Mob_Headstone,
+    Mob_Ground,
+    Mob_Stairs,
     1,
     false
 };
@@ -168,8 +171,9 @@ BlockSpec headstoneSpec =
 BlockSpec blockSpec = 
 {
     Tile_Block,
-    Tile_Tile,
-    Tile_Tile,
+    Mob_Block,
+    Mob_Tile,
+    Mob_Tile,
     17,
     true
 };
@@ -205,8 +209,8 @@ CollisionResponse BlockObjBase::CheckCollision()
     int playerX = player->GetX();
     int playerY = player->GetY() + 3;
 
-    if (   abs( playerX - objX ) < World::TileWidth
-        && abs( playerY - objY ) < World::TileHeight )
+    if (   abs( playerX - objX ) < World::MobTileWidth
+        && abs( playerY - objY ) < World::MobTileHeight )
         return Collision_Blocked;
 
     return Collision_Unknown;
@@ -249,13 +253,13 @@ void BlockObjBase::UpdateIdle()
         if ( Util::IsVertical( dir ) )
         {
             if ( objX == playerX
-                && abs( objY - playerY ) <= World::TileHeight )
+                && abs( objY - playerY ) <= World::MobTileHeight )
                 pushed = true;
         }
         else
         {
             if ( objY == playerY 
-                && abs( objX - playerX ) <= World::TileWidth )
+                && abs( objX - playerX ) <= World::MobTileWidth )
                 pushed = true;
         }
     }
@@ -267,12 +271,12 @@ void BlockObjBase::UpdateIdle()
         {
             switch ( dir )
             {
-            case Dir_Right: targetPos = objX + World::TileWidth;   break;
-            case Dir_Left:  targetPos = objX - World::TileWidth;   break;
-            case Dir_Down:  targetPos = objY + World::TileHeight;  break;
-            case Dir_Up:    targetPos = objY - World::TileHeight;  break;
+            case Dir_Right: targetPos = objX + World::MobTileWidth;   break;
+            case Dir_Left:  targetPos = objX - World::MobTileWidth;   break;
+            case Dir_Down:  targetPos = objY + World::MobTileHeight;  break;
+            case Dir_Up:    targetPos = objY - World::MobTileHeight;  break;
             }
-            World::SetTile( objX, objY, spec->floorTile1 );
+            World::SetMobXY( objX, objY, spec->floorMob1 );
             facing = dir;
             origX = objX;
             origY = objY;
@@ -303,8 +307,8 @@ void BlockObjBase::UpdateMoving()
     if ( done )
     {
         World::OnPushedBlock();
-        World::SetTile( objX, objY, spec->blockTile );
-        World::SetTile( origX, origY, spec->floorTile2 );
+        World::SetMobXY( objX, objY, spec->blockMob );
+        World::SetMobXY( origX, origY, spec->floorMob2 );
         isDeleted = true;
     }
 }
@@ -313,19 +317,12 @@ void BlockObjBase::Draw()
 {
     if ( curUpdate == &BlockObjBase::UpdateMoving )
     {
-        int srcX = (spec->blockTile & 0x0F) * World::TileWidth;
-        int srcY = ((spec->blockTile & 0xF0) >> 4) * World::TileHeight;
-
-        Graphics::DrawTile( 
-            Sheet_Background,
-            srcX,
-            srcY,
-            World::TileWidth,
-            World::TileHeight,
-            objX,
-            objY,
-            World::GetInnerPalette(),
-            0 );
+        Graphics::DrawStripSprite16x16( 
+            Sheet_Background, 
+            spec->blockTile, 
+            objX, 
+            objY, 
+            World::GetInnerPalette() );
     }
 }
 
@@ -509,7 +506,7 @@ void Tree::Update()
             || abs( (int) fire->GetY() - y ) >= 16 )
             continue;
 
-        World::SetTile( x, y, Tile_Stairs );
+        World::SetMobXY( x, y, Mob_Stairs );
         World::TakeSecret();
         Sound::PlayEffect( SEffect_secret );
         isDeleted = true;
@@ -684,7 +681,7 @@ void RockWall::Update()
             || abs( (int) bomb->GetY() - y ) >= 16 )
             continue;
 
-        World::SetTile( x, y, Tile_Cave );
+        World::SetMobXY( x, y, Mob_Cave );
         World::TakeSecret();
         Sound::PlayEffect( SEffect_secret );
         isDeleted = true;

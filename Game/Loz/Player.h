@@ -12,6 +12,8 @@
 
 #include "Input.h"
 
+enum TileBehavior : uint8_t;
+
 typedef std::array<uint8_t, 4> Limits;
 
 
@@ -34,7 +36,7 @@ public:
 private:
     uint8_t             state;
     uint8_t             speed;
-    uint8_t             tileRef;
+    TileBehavior        tileBehavior;
     bool                paralyzed;
     uint8_t             animTimer;
     uint8_t             avoidTurningWhenDiag;   // 56

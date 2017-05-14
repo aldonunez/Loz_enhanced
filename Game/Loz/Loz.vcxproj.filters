@@ -180,6 +180,9 @@
     <ClInclude Include="WorldImpl.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="TileBehavior.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="tileShaderPixel.glsl">

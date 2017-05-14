@@ -146,7 +146,7 @@ const int UWBorderLeft   = 0x20;
 const int UWBorderTop    = 0x60;
 const int UWBorderBottom = 0xD0;
 
-const int UWBlockRow        = 5;
+const int UWBlockRow        = 10;
 
 const int DoorWidth         = 32;
 const int DoorHeight        = 32;
@@ -285,6 +285,51 @@ WorldImpl::TileActionFunc WorldImpl::sActionFuncs[] =
     &WorldImpl::GhostTileAction,
     &WorldImpl::ArmosTileAction,
     &WorldImpl::BlockTileAction,
+};
+
+WorldImpl::TileBehaviorFunc WorldImpl::sBehaviorFuncs[] = 
+{
+    &WorldImpl::NoneTileAction,
+    &WorldImpl::NoneTileAction,
+    &WorldImpl::NoneTileAction,
+    &WorldImpl::StairsTileAction,
+
+    &WorldImpl::NoneTileAction,
+    &WorldImpl::NoneTileAction,
+    &WorldImpl::CaveTileAction,
+    &WorldImpl::GhostTileAction,
+    &WorldImpl::GhostTileAction,
+    &WorldImpl::GhostTileAction,
+    &WorldImpl::GhostTileAction,
+    &WorldImpl::GhostTileAction,
+    &WorldImpl::GhostTileAction,
+    &WorldImpl::GhostTileAction,
+    &WorldImpl::GhostTileAction,
+    &WorldImpl::GhostTileAction,
+    &WorldImpl::GhostTileAction,
+    &WorldImpl::GhostTileAction,
+    &WorldImpl::GhostTileAction,
+    &WorldImpl::GhostTileAction,
+    &WorldImpl::GhostTileAction,
+    &WorldImpl::GhostTileAction,
+    &WorldImpl::GhostTileAction,
+    &WorldImpl::ArmosTileAction,
+    &WorldImpl::ArmosTileAction,
+    &WorldImpl::ArmosTileAction,
+    &WorldImpl::ArmosTileAction,
+    &WorldImpl::ArmosTileAction,
+    &WorldImpl::ArmosTileAction,
+    &WorldImpl::ArmosTileAction,
+    &WorldImpl::ArmosTileAction,
+    &WorldImpl::ArmosTileAction,
+    &WorldImpl::ArmosTileAction,
+    &WorldImpl::ArmosTileAction,
+    &WorldImpl::ArmosTileAction,
+    &WorldImpl::ArmosTileAction,
+    &WorldImpl::ArmosTileAction,
+    &WorldImpl::ArmosTileAction,
+    &WorldImpl::ArmosTileAction,
+    &WorldImpl::NoneTileAction,
 };
 
 WorldImpl::UpdateFunc WorldImpl::sModeFuncs[Modes] = 
@@ -732,6 +777,7 @@ static void SetLevelFgPalette()
 WorldImpl::WorldImpl()
     :   curRoomId( 0 ),
         curTileMapIndex( 0 ),
+        loadMobFunc( nullptr ),
         lastMode( Mode_Demo ),
         curMode( Mode_Play ),
         curColorSeqNum( 0 ),
@@ -796,7 +842,9 @@ WorldImpl::WorldImpl()
         brightenRoom(),
         profileSlot(),
         profile(),
-        curUWBlockFlags()
+        curUWBlockFlags(),
+        ghostCount(),
+        armosCount()
 {
 }
 
@@ -822,8 +870,8 @@ WorldImpl::~WorldImpl()
 
 void WorldImpl::LoadOpenRoomContext()
 {
-    colCount = 16;
-    rowCount = 11;
+    colCount = 32;
+    rowCount = 22;
     startRow = 0;
     startCol = 0;
     tileTypeCount = 56;
@@ -835,10 +883,10 @@ void WorldImpl::LoadOpenRoomContext()
 
 void WorldImpl::LoadClosedRoomContext()
 {
-    colCount = 12;
-    rowCount = 7;
-    startRow = 2;
-    startCol = 2;
+    colCount = 24;
+    rowCount = 14;
+    startRow = 4;
+    startCol = 4;
     tileTypeCount = 9;
     marginRight = UWMarginRight;
     marginLeft = UWMarginLeft;
@@ -861,12 +909,17 @@ void WorldImpl::LoadOverworldContext()
 {
     LoadOpenRoomContext();
     LoadMapResourcesFromDirectory( 124 );
+    Util::LoadResource( "owPrimaryMobs.list", &primaryMobs );
+    Util::LoadResource( "owSecondaryMobs.list", &secondaryMobs );
+    Util::LoadList( "owTileBehaviors.dat", tileBehaviors, TileTypes );
 }
 
 void WorldImpl::LoadUnderworldContext()
 {
     LoadClosedRoomContext();
     LoadMapResourcesFromDirectory( 64 );
+    Util::LoadResource( "uwPrimaryMobs.list", &primaryMobs );
+    Util::LoadList( "uwTileBehaviors.dat", tileBehaviors, TileTypes );
 }
 
 void WorldImpl::LoadCellarContext()
@@ -879,7 +932,11 @@ void WorldImpl::LoadCellarContext()
 
     Util::LoadList( "underworldCellarTileAttrs.dat", tileAttrs, tileTypeCount );
 
-    Graphics::LoadTileSheet( Sheet_Background, "underworldCellarTiles.png" );
+    Graphics::LoadTileSheet( Sheet_Background, "underworldTiles.png" );
+
+    Util::LoadResource( "uwCellarPrimaryMobs.list", &primaryMobs );
+    Util::LoadResource( "uwCellarSecondaryMobs.list", &secondaryMobs );
+    Util::LoadList( "uwTileBehaviors.dat", tileBehaviors, TileTypes );
 }
 
 void WorldImpl::LoadLevel( int level )
@@ -933,7 +990,7 @@ void WorldImpl::LoadLevel( int level )
 
         for ( int i = 0; i < _countof( tileMaps ); i++ )
         {
-            memset( tileMaps[i].tileRefs, Tile_Wall, sizeof tileMaps[i].tileRefs );
+            memset( tileMaps[i].tileRefs, Tile_WallEdge, sizeof tileMaps[i].tileRefs );
         }
     }
 
@@ -1280,25 +1337,49 @@ void World::SetSwordBlocked( bool value )
     sWorld->swordBlocked = value;
 }
 
-int WorldImpl::GetMapTile( int row, int col )
+TileBehavior WorldImpl::GetTileBehavior( int row, int col )
 {
-    return tileMaps[curTileMapIndex].tileRefs[row][col];
+    return (TileBehavior) tileMaps[curTileMapIndex].tileBehaviors[row][col];
 }
 
-void World::SetTile( int x, int y, int tileType )
-{
-    sWorld->SetTile( x, y, tileType );
-}
-
-void WorldImpl::SetTile( int x, int y, int tileType )
+TileBehavior WorldImpl::GetTileBehaviorXY( int x, int y )
 {
     int col = x / TileWidth;
     int row = (y - TileMapBaseY) / TileHeight;
 
-    if ( col < 0 || col >= Columns || row < 0 || row >= Rows )
+    return GetTileBehavior( row, col );
+}
+
+void World::SetMobXY( int x, int y, int mob )
+{
+    sWorld->SetMobXY( x, y, mob );
+}
+
+void WorldImpl::SetMobXY( int x, int y, int mob )
+{
+    int fineCol = x / TileWidth;
+    int fineRow = (y - TileMapBaseY) / TileHeight;
+
+    if ( fineCol < 0 || fineCol >= Columns || fineRow < 0 || fineRow >= Rows )
         return;
 
-    tileMaps[curTileMapIndex].tileRefs[row][col] = tileType;
+    SetMob( fineRow, fineCol, mob );
+}
+
+void WorldImpl::SetMob( int row, int col, int mob )
+{
+    (this->*loadMobFunc)( &tileMaps[curTileMapIndex], row, col, mob );
+
+    for ( int r = row; r < row + 2; r++ )
+    {
+        for ( int c = col; c < col + 2; c++ )
+        {
+            uint8_t t = tileMaps[curTileMapIndex].tileRefs[r][c];
+            tileMaps[curTileMapIndex].tileBehaviors[r][c] = tileBehaviors[t];
+        }
+    }
+
+    // TODO: Will we need to run some function to initialize the map object, like in LoadLayout?
 }
 
 int World::GetInnerPalette()
@@ -1311,27 +1392,26 @@ int WorldImpl::GetInnerPalette()
     return roomAttrs[curRoomId].GetInnerPalette();
 }
 
-Point World::GetRandomWaterTile()
+Cell World::GetRandomWaterTile()
 {
     return sWorld->GetRandomWaterTile();
 }
 
-Point WorldImpl::GetRandomWaterTile()
+Cell WorldImpl::GetRandomWaterTile()
 {
-    uint8_t waterList[Rows * Columns];
+    Cell waterList[Rows * Columns];
     int waterCount = 0;
 
-    for ( int r = 0; r < Rows; r++ )
+    for ( int r = 0; r < Rows - 1; r++ )
     {
-        for ( int c = 0; c < Columns; c++ )
+        for ( int c = 0; c < Columns - 1; c++ )
         {
-            int tileRef = tileMaps[curTileMapIndex].tileRefs[r][c];
-            uint8_t attr = tileAttrs[tileRef];
-            int action = TileAttr::GetAction( attr );
-
-            if ( action == TileAction_Ladder )
+            if (   GetTileBehavior( r,   c   ) == TileBehavior_Water
+                && GetTileBehavior( r,   c+1 ) == TileBehavior_Water
+                && GetTileBehavior( r+1, c   ) == TileBehavior_Water
+                && GetTileBehavior( r+1, c+1 ) == TileBehavior_Water )
             {
-                waterList[waterCount] = (r << 4) | c;
+                waterList[waterCount] = { (uint8_t) r, (uint8_t) c };
                 waterCount++;
             }
         }
@@ -1340,9 +1420,8 @@ Point WorldImpl::GetRandomWaterTile()
     assert( waterCount > 0 );
 
     int r = Util::GetRandom( waterCount );
-    uint8_t pos = waterList[r];
-    Point p = { pos & 0xF, (pos >> 4) + BaseRows };
-    return p;
+    Cell cell = waterList[r];
+    return { (uint8_t) (cell.Row + BaseRows), cell.Col };
 }
 
 Object* World::GetObject( int slot )
@@ -1419,24 +1498,23 @@ void World::CoverTile( int row, int col )
 
 void WorldImpl::InteractTile( int row, int col, TileInteraction interaction )
 {
-    if ( row < 0 || col < 0 || row >= Rows * 2 || col >= Columns * 2 )
+    if ( row < 0 || col < 0 || row >= Rows || col >= Columns )
         return;
 
-    int coarseRow = row / 2;
-    int coarseCol = col / 2;
-    uint8_t t = tileMaps[curTileMapIndex].tileRefs[coarseRow][coarseCol];
-    uint8_t attr = tileAttrs[t];
-    int action = TileAttr::GetAction( attr );
-
-    TileActionFunc actionFunc = sActionFuncs[action];
-    (this->*actionFunc)( coarseRow, coarseCol, interaction );
+    TileBehavior behavior = GetTileBehavior( row, col );
+    TileBehaviorFunc behaviorFunc = sBehaviorFuncs[behavior];
+    (this->*behaviorFunc)( row, col, interaction );
 }
 
 bool WorldImpl::CollidesTile( int row, int col )
 {
-    int tileRef = tileMaps[curTileMapIndex].tileRefs[row][col];
-    uint8_t attr = tileAttrs[tileRef];
-    return TileAttr::IsTileBlocked( attr );
+    TileBehavior behavior = (TileBehavior) tileMaps[curTileMapIndex].tileBehaviors[row][col];
+    return CollidesTile( behavior );
+}
+
+bool WorldImpl::CollidesTile( TileBehavior behavior )
+{
+    return behavior >= TileBehavior_FirstSolid;
 }
 
 TileCollision World::CollidesWithTileStill( int x, int y )
@@ -1487,13 +1565,8 @@ TileCollision WorldImpl::CollidesWithTile(
             x += offset;
     }
 
-    bool firstTile = true;
-    uint8_t ref;
-    bool collides = false;
+    TileBehavior behavior = TileBehavior_FirstWalkable;
     int fineRow = (y - TileMapBaseY) / 8;
-    int coarseRow = fineRow / 2;
-    int quadRow = fineRow % 2;
-
     int fineCol1 = x / 8;
     int fineCol2;
     int hitFineCol = fineCol1;
@@ -1506,47 +1579,32 @@ TileCollision WorldImpl::CollidesWithTile(
     if ( !IsOverworld() && CollidesWithUWBorder( fineRow, fineCol1, fineCol2 ) )
     {
         // If you hit the border, then I don't think it's important to know the exact fineCol.
-        TileCollision collision = { true, Tile_Wall, fineCol1, fineRow };
+        TileCollision collision = { true, TileBehavior_Wall, fineCol1, fineRow };
         return collision;
     }
 
     for ( int c = fineCol1; c <= fineCol2; c++ )
     {
-        int coarseCol = c / 2;
-        int quadCol = c % 2;
-        int tileRef = GetMapTile( coarseRow, coarseCol );
-        uint8_t attr = tileAttrs[tileRef];
+        TileBehavior curBehavior = GetTileBehavior( fineRow, c );
 
-        if ( firstTile )
-        {
-            ref = tileRef;
-            firstTile = false;
-        }
+        if ( curBehavior == TileBehavior_Water && state.play.allowWalkOnWater )
+            curBehavior = TileBehavior_GenericWalkable;
 
-        if ( TileAttr::IsQuadrantBlocked( attr, quadRow, quadCol ) )
+        if ( curBehavior > behavior )
         {
-            int action = TileAttr::GetAction( attr );
-            if ( action == TileAction_Ladder && state.play.allowWalkOnWater )
-                continue;
-            if ( action != 0 )
-            {
-                TileCollision collision = { true, tileRef, c, fineRow };
-                return collision;
-            }
-            collides = true;
-            ref = tileRef;
+            behavior = curBehavior;
             hitFineCol = c;
         }
     }
 
-    TileCollision collision = { collides, ref, hitFineCol, fineRow };
+    TileCollision collision = { CollidesTile( behavior ), behavior, hitFineCol, fineRow };
     return collision;
 }
 
 bool WorldImpl::CollidesWithUWBorder( int fineRow, int fineCol1, int fineCol2 )
 {
-    if ( (fineRow >= startRow * 2) && (fineRow  < (startRow + rowCount) * 2) 
-        && (fineCol1 >= startCol * 2) && (fineCol2 < (startCol + colCount) * 2) )
+    if ( (fineRow >= startRow) && (fineRow  < (startRow + rowCount)) 
+        && (fineCol1 >= startCol) && (fineCol2 < (startCol + colCount)) )
         return false;
 
     // Coarse checks for collision are done here. All of the border's treated the same.
@@ -1602,12 +1660,12 @@ void WorldImpl::OnActivatedArmos( int x, int y )
 
     if ( pos != nullptr && x == pos->x && y == pos->y )
     {
-        SetTile( x, y, Tile_Stairs );
+        SetMobXY( x, y, Mob_Stairs );
         Sound::PlayEffect( SEffect_secret );
     }
     else
     {
-        SetTile( x, y, Tile_Ground );
+        SetMobXY( x, y, Mob_Ground );
     }
 
     if ( !GotItem() )
@@ -1744,7 +1802,7 @@ void WorldImpl::ShowShortcutStairs( int roomId, int tileMapIndex )
     int row;
     int col;
     GetRoomCoord( pos, row, col );
-    tileMaps[tileMapIndex].tileRefs[row][col] = Tile_Stairs;
+    SetMob( row * 2, col * 2, Mob_Stairs );
 }
 
 void WorldImpl::DrawMap( int roomId, int mapIndex, int offsetX, int offsetY )
@@ -1821,7 +1879,7 @@ void WorldImpl::DrawMap( int roomId, int mapIndex, int offsetX, int offsetY )
             int srcY = ((tileRef & 0xF0) >> 4) * TileHeight;
             int palette;
 
-            if ( r < 2 || r >= 9 || c < 2 || c >= 14 )
+            if ( r < 4 || r >= 18 || c < 4 || c >= 28 )
                 palette = outerPalette;
             else
                 palette = innerPalette;
@@ -2550,39 +2608,93 @@ void WorldImpl::LoadCaveRoom( int uniqueRoomId )
 {
     curTileMapIndex = 0;
 
-    LoadLayout( uniqueRoomId, 0, true );
+    LoadLayout( uniqueRoomId, 0, TileScheme::Overworld );
 }
 
 void WorldImpl::LoadMap( int roomId, int tileMapIndex )
 {
-    bool        owTileFormat = false;
+    TileScheme  tileScheme;
     int         uniqueRoomId = roomAttrs[roomId].GetUniqueRoomId();
 
     if ( IsOverworld() )
     {
-        owTileFormat = true;
+        tileScheme = TileScheme::Overworld;
     }
     else if ( uniqueRoomId >= 0x3E )
     {
-        owTileFormat = true;
+        tileScheme = TileScheme::UnderworldCellar;
         uniqueRoomId -= 0x3E;
     }
+    else
+    {
+        tileScheme = TileScheme::UnderworldMain;
+    }
 
-    LoadLayout( uniqueRoomId, tileMapIndex, owTileFormat );
+    LoadLayout( uniqueRoomId, tileMapIndex, tileScheme );
 }
 
-void WorldImpl::LoadLayout( int uniqueRoomId, int tileMapIndex, bool owTileFormat )
+void WorldImpl::LoadOWMob( TileMap* map, int row, int col, int mob )
 {
-    const int MaxColumnStartOffset = (colCount - 1) * rowCount;
+    int primary = primaryMobs.GetItems()[mob];
+
+    if ( primary == 0xFF )
+    {
+        int index = mob * 4;
+        const uint8_t* secondaries = secondaryMobs.GetItems();
+        map->tileRefs[row  ][col  ] = secondaries[index+0];
+        map->tileRefs[row  ][col+1] = secondaries[index+2];
+        map->tileRefs[row+1][col  ] = secondaries[index+1];
+        map->tileRefs[row+1][col+1] = secondaries[index+3];
+    }
+    else
+    {
+        map->tileRefs[row  ][col  ] = primary;
+        map->tileRefs[row  ][col+1] = primary+2;
+        map->tileRefs[row+1][col  ] = primary+1;
+        map->tileRefs[row+1][col+1] = primary+3;
+    }
+}
+
+void WorldImpl::LoadUWMob( TileMap* map, int row, int col, int mob )
+{
+    int primary = primaryMobs.GetItems()[mob];
+
+    if ( primary < 0x70 || primary > 0xF2 )
+    {
+        map->tileRefs[row  ][col  ] = primary;
+        map->tileRefs[row  ][col+1] = primary;
+        map->tileRefs[row+1][col  ] = primary;
+        map->tileRefs[row+1][col+1] = primary;
+    }
+    else
+    {
+        map->tileRefs[row  ][col  ] = primary;
+        map->tileRefs[row  ][col+1] = primary+2;
+        map->tileRefs[row+1][col  ] = primary+1;
+        map->tileRefs[row+1][col+1] = primary+3;
+    }
+}
+
+void WorldImpl::LoadLayout( int uniqueRoomId, int tileMapIndex, TileScheme tileScheme )
+{
+    const int MaxColumnStartOffset = (colCount/2 - 1) * rowCount/2;
 
     RoomCols*   columns = &roomCols[uniqueRoomId];
     TileMap*    map = &tileMaps[tileMapIndex];
-    int         actionFound = 0;
-    int         actionRow = 0;
-    int         actionCol = 0;
     int         rowEnd = startRow + rowCount;
+    bool        owLayoutFormat;
 
-    for ( int i = 0; i < colCount; i++ )
+    owLayoutFormat =   tileScheme == TileScheme::Overworld 
+                    || tileScheme == TileScheme::UnderworldCellar;
+
+    switch ( tileScheme )
+    {
+    case TileScheme::Overworld: loadMobFunc = &WorldImpl::LoadOWMob; break;
+    case TileScheme::UnderworldMain: loadMobFunc = &WorldImpl::LoadUWMob; break;
+    case TileScheme::UnderworldCellar: loadMobFunc = &WorldImpl::LoadOWMob; break;
+    }
+
+    for ( int i = 0; i < colCount/2; i++ )
     {
         uint8_t columnDesc = columns->ColumnDesc[i];
         uint8_t tableIndex = (columnDesc & 0xF0) >> 4;
@@ -2606,41 +2718,53 @@ void WorldImpl::LoadLayout( int uniqueRoomId, int tileMapIndex, bool owTileForma
 
         assert( j <= MaxColumnStartOffset );
 
-        int c = startCol + i;
+        int c = startCol + i*2;
 
         for ( int r = startRow; r < rowEnd; j++ )
         {
             uint8_t t = table[j];
             uint8_t tileRef;
 
-            if ( owTileFormat )
+            if ( owLayoutFormat )
                 tileRef = t & 0x3F;
             else
                 tileRef = t & 0x7;
 
+            (this->*loadMobFunc)( map, r, c, tileRef );
+
             uint8_t attr = tileAttrs[tileRef];
             int action = TileAttr::GetAction( attr );
+            TileActionFunc actionFunc = nullptr;
 
-            if ( action != 0 && action <= LoadingTileActions )
+            if ( action != 0 )
             {
-                actionFound = action;
-                actionRow = r;
-                actionCol = c;
+                actionFunc = sActionFuncs[action];
+                (this->*actionFunc)( r, c, TInteract_Load );
             }
 
-            map->tileRefs[r++][c] = tileRef;
+            r += 2;
 
-            if ( owTileFormat )
+            if ( owLayoutFormat )
             {
                 if ( (t & 0x40) != 0 && r < rowEnd )
-                    map->tileRefs[r++][c] = tileRef;
+                {
+                    (this->*loadMobFunc)( map, r, c, tileRef );
+
+                    if ( actionFunc != nullptr )
+                        (this->*actionFunc)( r, c, TInteract_Load );
+                    r += 2;
+                }
             }
             else
             {
                 int repeat = (t >> 4) & 0x7;
                 for ( int m = 0; m < repeat && r < rowEnd; m++ )
                 {
-                    map->tileRefs[r++][c] = tileRef;
+                    (this->*loadMobFunc)( map, r, c, tileRef );
+
+                    if ( actionFunc != nullptr )
+                        (this->*actionFunc)( r, c, TInteract_Load );
+                    r += 2;
                 }
             }
         }
@@ -2651,25 +2775,47 @@ void WorldImpl::LoadLayout( int uniqueRoomId, int tileMapIndex, bool owTileForma
         UWRoomAttrs& uwRoomAttrs = (UWRoomAttrs&) roomAttrs[curRoomId];
         if ( uwRoomAttrs.HasBlock() )
         {
-            for ( int c = startCol; c < startCol + colCount; c++ )
+            for ( int c = startCol; c < startCol + colCount; c += 2 )
             {
                 uint8_t tileRef = tileMaps[curTileMapIndex].tileRefs[UWBlockRow][c];
                 if ( tileRef == Tile_Block )
                 {
-                    actionFound = TileAction_Block;
-                    actionCol = c;
-                    actionRow = UWBlockRow;
+                    TileActionFunc actionFunc = sActionFuncs[TileAction_Block];
+                    (this->*actionFunc)( UWBlockRow, c, TInteract_Load );
                     break;
                 }
             }
         }
     }
 
-    // Only 1 secret is allowed in each room. So, handle it after loading all the tiles.
-    if ( actionFound != 0 )
+    uint8_t* pTile = &map->tileRefs[0][0];
+    uint8_t* pBehavior = &map->tileBehaviors[0][0];
+    for ( int i = 0; i < (Rows * Columns); i++ )
     {
-        TileActionFunc actionFunc = sActionFuncs[actionFound];
-        (this->*actionFunc)( actionRow, actionCol, TInteract_Load );
+        uint8_t t = *pTile++;
+        *pBehavior++ = tileBehaviors[t];
+    }
+
+    PatchTileBehaviors();
+}
+
+void WorldImpl::PatchTileBehaviors()
+{
+    PatchTileBehavior( ghostCount, ghostCells, TileBehavior_Ghost0 );
+    PatchTileBehavior( armosCount, armosCells, TileBehavior_Armos0 );
+}
+
+void WorldImpl::PatchTileBehavior( int count, MobPatchCells cells, TileBehavior baseBehavior )
+{
+    for ( int i = 0; i < count; i++ )
+    {
+        int row = cells[i].Row;
+        int col = cells[i].Col;
+        TileBehavior behavior = (TileBehavior) (baseBehavior + 15 - i);
+        tileMaps[curTileMapIndex].tileBehaviors[row    ][col    ] = behavior;
+        tileMaps[curTileMapIndex].tileBehaviors[row    ][col + 1] = behavior;
+        tileMaps[curTileMapIndex].tileBehaviors[row + 1][col    ] = behavior;
+        tileMaps[curTileMapIndex].tileBehaviors[row + 1][col + 1] = behavior;
     }
 }
 
@@ -2693,6 +2839,8 @@ void WorldImpl::GotoPlay( PlayState::RoomType roomType )
     roomAllDead = false;
     madeRoomItem = false;
     enablePersonFireballs = false;
+    ghostCount = 0;
+    armosCount = 0;
 
     state.play.substate = PlayState::Active;
     state.play.animatingRoomColors = false;
@@ -3027,7 +3175,7 @@ void WorldImpl::UpdateRoomColors()
             int row;
             int col;
             GetRoomCoord( posAttr->pos, row, col );
-            tileMaps[curTileMapIndex].tileRefs[row][col] = Tile_Stairs;
+            SetMob( row * 2, col * 2, Mob_Stairs );
             Sound::PlayEffect( SEffect_secret );
         }
         return;
@@ -3163,7 +3311,7 @@ void WorldImpl::CheckSecrets()
 
 void WorldImpl::AddUWRoomStairs()
 {
-    SetTile( 0xD0, 0x60, Tile_UW_Stairs );
+    SetMobXY( 0xD0, 0x60, Mob_UW_Stairs );
 }
 
 void WorldImpl::KillAllObjects()
@@ -3818,11 +3966,11 @@ void WorldImpl::PutEdgeObject()
         else if ( y == 0xE0 )
             x += 0x10;
 
-        int row = (y / 16) - 4;
-        int col = (x / 16);
-        int tileRef = GetMapTile( row, col );
+        int row = (y / 8) - 8;
+        int col = (x / 8);
+        TileBehavior behavior = GetTileBehavior( row, col );
 
-        if ( (tileRef != Tile_Sand) && !CollidesTile( row, col ) )
+        if ( (behavior != TileBehavior_Sand) && !CollidesTile( behavior ) )
             break;
         if ( y == edgeY && x == edgeX )
             break;
@@ -4299,13 +4447,10 @@ void WorldImpl::UpdateEnter_Start()
 
     if ( IsOverworld() )
     {
-        int row = (player->GetY() + 3 - TileMapBaseY) / TileHeight;
-        int col = player->GetX() / TileWidth;
-
-        uint8_t tileRef = tileMaps[curTileMapIndex].tileRefs[row][col];
-        if ( tileRef == Tile_Cave )
+        TileBehavior behavior = GetTileBehaviorXY( player->GetX(), player->GetY() + 3 );
+        if ( behavior == TileBehavior_Cave )
         {
-            player->SetY( player->GetY() + TileHeight );
+            player->SetY( player->GetY() + MobTileHeight );
             player->SetFacing( Dir_Down );
 
             state.enter.playerFraction = 0;
@@ -4334,9 +4479,9 @@ void WorldImpl::UpdateEnter_Start()
         int distance;
 
         if ( doorType == DoorType_Shutter || doorType == DoorType_Bombable )
-            distance = TileWidth * 2;
+            distance = MobTileWidth * 2;
         else
-            distance = TileWidth;
+            distance = MobTileWidth;
 
         state.enter.targetX = player->GetX();
         state.enter.targetY = player->GetY();
@@ -4459,8 +4604,8 @@ void WorldImpl::SetPlayerExitPosOW( int roomId )
     col = exitRPos & 0xF;
     row = (exitRPos >> 4) + 4;
 
-    player->SetX( col * TileWidth );
-    player->SetY( row * TileHeight + 0xD );
+    player->SetX( col * MobTileWidth );
+    player->SetY( row * MobTileHeight + 0xD );
 }
 
 const uint8_t* World::GetString( int stringId )
@@ -5000,10 +5145,10 @@ void WorldImpl::DrawWinGame()
     }
 }
 
-void WorldImpl::GotoStairs( int tileRef )
+void WorldImpl::GotoStairs( TileBehavior behavior )
 {
     state.stairs.substate = StairsState::Start;
-    state.stairs.tileRef = tileRef;
+    state.stairs.tileBehavior = behavior;
     state.stairs.playerPriority = SpritePri_AboveBg;
 
     curMode = Mode_Stairs;
@@ -5018,7 +5163,7 @@ void WorldImpl::UpdateStairsState()
         if ( IsOverworld() )
             Sound::StopAll();
 
-        if ( state.stairs.tileRef == Tile_Cave )
+        if ( state.stairs.tileBehavior == TileBehavior_Cave )
         {
             player->SetFacing( Dir_Up );
 
@@ -5806,7 +5951,7 @@ void WorldImpl::BombTileAction( int row, int col, TileInteraction interaction )
 
     if ( GotSecret() )
     {
-        tileMaps[curTileMapIndex].tileRefs[row][col] = Tile_Cave;
+        SetMob( row, col, Mob_Cave );
     }
     else
     {
@@ -5824,7 +5969,7 @@ void WorldImpl::BurnTileAction( int row, int col, TileInteraction interaction )
 
     if ( GotSecret() )
     {
-        tileMaps[curTileMapIndex].tileRefs[row][col] = Tile_Stairs;
+        SetMob( row, col, Mob_Stairs );
     }
     else
     {
@@ -5876,8 +6021,8 @@ void WorldImpl::CaveTileAction( int row, int col, TileInteraction interaction )
 
     if ( IsOverworld() )
     {
-        int t = GetMapTile( row, col );
-        GotoStairs( t );
+        TileBehavior behavior = GetTileBehavior( row, col );
+        GotoStairs( behavior );
     }
 
     _RPT2( _CRT_WARN, "Cover cave: %d, %d\n", row, col );
@@ -5889,34 +6034,55 @@ void WorldImpl::StairsTileAction( int row, int col, TileInteraction interaction 
         return;
 
     if ( GetMode() == Mode_Play )
-        GotoStairs( Tile_Stairs );
+        GotoStairs( TileBehavior_Stairs );
 
     _RPT2( _CRT_WARN, "Cover stairs: %d, %d\n", row, col );
 }
 
 void WorldImpl::GhostTileAction( int row, int col, TileInteraction interaction )
 {
-    if ( interaction != TInteract_Push )
-        return;
+    if ( interaction == TInteract_Push )
+        _RPT2( _CRT_WARN, "Push headstone: %d, %d\n", row, col );
 
-    _RPT2( _CRT_WARN, "Push headstone: %d, %d\n", row, col );
-
-    MakeActivatedObject( Obj_FlyingGhini, row, col );
+    CommonMakeObjectAction( row, col, interaction, ghostCount, ghostCells, Obj_FlyingGhini );
 }
 
 void WorldImpl::ArmosTileAction( int row, int col, TileInteraction interaction )
 {
-    if ( interaction != TInteract_Push )
-        return;
+    if ( interaction == TInteract_Push )
+        _RPT2( _CRT_WARN, "Push armos: %d, %d\n", row, col );
 
-    _RPT2( _CRT_WARN, "Push armos: %d, %d\n", row, col );
+    CommonMakeObjectAction( row, col, interaction, armosCount, armosCells, Obj_Armos );
+}
 
-    MakeActivatedObject( Obj_Armos, row, col );
+void WorldImpl::CommonMakeObjectAction( int row, int col, TileInteraction interaction,
+    int& patchCount, MobPatchCells patchCells, ObjType objType )
+{
+    if ( interaction == TInteract_Load )
+    {
+        if ( patchCount < 16 )
+        {
+            patchCells[patchCount].Row = row;
+            patchCells[patchCount].Col = col;
+            patchCount++;
+        }
+    }
+    else if ( interaction == TInteract_Push )
+    {
+        int behavior = tileMaps[curTileMapIndex].tileBehaviors[row][col];
+
+        if ( row > 0 && tileMaps[curTileMapIndex].tileBehaviors[row - 1][col] == behavior )
+            row--;
+        if ( col > 0 && tileMaps[curTileMapIndex].tileBehaviors[row][col - 1] == behavior )
+            col--;
+
+        MakeActivatedObject( objType, row, col );
+    }
 }
 
 void WorldImpl::MakeActivatedObject( int type, int row, int col )
 {
-    row += 4;
+    row += BaseRows;
 
     int x = col * TileWidth;
     int y = row * TileHeight;

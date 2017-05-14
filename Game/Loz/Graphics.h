@@ -79,6 +79,13 @@ public:
         int palette,
         int flags
         );
+    static void DrawStripSprite16x16(
+        int slot,
+        int firstTile,
+        int destX,
+        int destY,
+        int palette
+        );
 
     static void LoadSystemPalette( const int* colorsArgb8 );
     static ALLEGRO_COLOR GetSystemColor( int sysColor );

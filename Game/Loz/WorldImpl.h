@@ -27,12 +27,20 @@ private:
     static const int UniqueRooms = 124;
     static const int ColumnTables = 16;
     static const int ScrollSpeed = 4;
-    static const int TileTypes = 56;
+    static const int MobTypes = 56;
+    static const int TileTypes = 256;
     static const int TileActions = 16;
     static const int LoadingTileActions = 4;
     static const int SparseAttrs = 11;
     static const int RoomHistoryLength = 6;
     static const int Modes = Mode_Max;
+
+    enum class TileScheme
+    {
+        Overworld,
+        UnderworldMain,
+        UnderworldCellar,
+    };
 
     struct LevelDirectory
     {
@@ -60,12 +68,13 @@ private:
 
     struct RoomCols
     {
-        uint8_t     ColumnDesc[Columns];
+        uint8_t     ColumnDesc[MobColumns];
     };
 
     struct TileMap
     {
         uint8_t     tileRefs[Rows][Columns];
+        uint8_t     tileBehaviors[Rows][Columns];
     };
 
     struct SparsePos
@@ -86,9 +95,13 @@ private:
     typedef Util::Table<uint8_t> OWExtraTable;
     typedef Util::Table<uint8_t> ObjListTable;
     typedef Util::Table<uint8_t> TextTable;
+    typedef Util::List<uint8_t> MobList;
     typedef void (WorldImpl::*UpdateFunc)();
     typedef void (WorldImpl::*DrawFunc)();
-    typedef void (WorldImpl::*TileActionFunc)( int row, int col, TileInteraction interaction );
+    typedef void (WorldImpl::*TileActionFunc)(int row, int col, TileInteraction interaction);
+    typedef void (WorldImpl::*TileBehaviorFunc)( int row, int col, TileInteraction interaction );
+    typedef void (WorldImpl::*LoadMobFunc)(TileMap* map, int row, int col, int mob);
+    typedef Cell MobPatchCells[16];
 
 public:
     LevelDirectory  directory;
@@ -99,11 +112,15 @@ public:
     RoomAttrs       roomAttrs[Rooms];
     int             curRoomId;
     int             curTileMapIndex;
-    uint8_t         tileAttrs[TileTypes];
+    uint8_t         tileAttrs[MobTypes];
+    uint8_t         tileBehaviors[TileTypes];
     SparseAttrTable sparseRoomAttrs;
     OWExtraTable    extraData;
     ObjListTable    objLists;
     TextTable       textTable;
+    MobList         primaryMobs;
+    MobList         secondaryMobs;
+    LoadMobFunc     loadMobFunc;
 
     int             rowCount;
     int             colCount;
@@ -396,7 +413,7 @@ private:
         int             targetY;
         int             playerSpeed;
         int             playerFraction;
-        int             tileRef;
+        TileBehavior    tileBehavior;
         SpritePriority  playerPriority;
     };
 
@@ -457,6 +474,7 @@ private:
     };
 
     static TileActionFunc sActionFuncs[TileActions];
+    static TileBehaviorFunc sBehaviorFuncs[TileBehavior_Max];
     static UpdateFunc sModeFuncs[Modes];
     static DrawFunc sDrawFuncs[Modes];
 
@@ -533,6 +551,10 @@ public:
     int             profileSlot;
     Profile         profile;
     UWRoomFlags*    curUWBlockFlags;
+    int             ghostCount;
+    int             armosCount;
+    MobPatchCells   ghostCells;
+    MobPatchCells   armosCells;
 
 public:
     WorldImpl();
@@ -574,9 +596,10 @@ public:
 public:
     void UseRecorder();
     void MakeFluteSecret();
-    void SetTile( int x, int y, int tileType );
+    void SetMobXY( int x, int y, int mob );
+    void SetMob( int row, int col, int mob );
     int GetInnerPalette();
-    Point GetRandomWaterTile();
+    Cell GetRandomWaterTile();
     void FadeIn();
     void InteractTile( int row, int col, TileInteraction interaction );
 
@@ -614,7 +637,9 @@ private:
     void LoadLevel( int level );
     void LoadRoom( int roomId, int tileMapIndex );
     void LoadMap( int roomId, int tileMapIndex );
-    void LoadLayout( int uniqueRoomId, int tileMapIndex, bool owTileFormat );
+    void LoadLayout( int uniqueRoomId, int tileMapIndex, TileScheme tileScheme );
+    void LoadOWMob( TileMap* map, int row, int col, int mob );
+    void LoadUWMob( TileMap* map, int row, int col, int mob );
     void LoadCaveRoom( int uniqueRoomId );
 
     void LoadOverworldContext();
@@ -716,7 +741,7 @@ private:
     void UpdateWinGame_Credits();
     void DrawWinGame();
 
-    void GotoStairs( int tileRef );
+    void GotoStairs( TileBehavior behavior );
     void UpdateStairsState();
     void DrawStairsState();
 
@@ -776,11 +801,13 @@ private:
 
 private:
     void SummonWhirlwind();
-    int GetMapTile( int row, int col );
+    TileBehavior GetTileBehavior( int row, int col );
+    TileBehavior GetTileBehaviorXY( int x, int y );
     void MakeActivatedObject( int type, int row, int col );
 
     bool CollidesWithUWBorder( int fineRow, int fineCol1, int fineCol2 );
     bool CollidesTile( int row, int col );
+    bool CollidesTile( TileBehavior behavior );
     void CheckPowerTriforceFanfare();
     void AdjustInventory();
     void WarnLowHPIfNeeded();
@@ -788,6 +815,9 @@ private:
     void ShowShortcutStairs( int roomId, int tileMapIndex );
 
 private:
+    void PatchTileBehaviors();
+    void PatchTileBehavior( int count, MobPatchCells cells, TileBehavior baseBehavior );
+
     void NoneTileAction( int row, int col, TileInteraction interaction );
     void PushTileAction( int row, int col, TileInteraction interaction );
     void BombTileAction( int row, int col, TileInteraction interaction );
@@ -800,6 +830,9 @@ private:
     void GhostTileAction( int row, int col, TileInteraction interaction );
     void ArmosTileAction( int row, int col, TileInteraction interaction );
     void BlockTileAction( int row, int col, TileInteraction interaction );
+
+    void CommonMakeObjectAction( int row, int col, TileInteraction interaction, 
+        int& patchCount, MobPatchCells patchCells, ObjType objType );
 
 private:
     void ClearRoomItemData();

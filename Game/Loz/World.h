@@ -10,6 +10,7 @@
 #include "RoomAttrs.h"
 #include "StatusBar.h"
 #include "Submenu.h"
+#include "TileBehavior.h"
 
 // TODO: Work around a compiler bug by including this file to define ObjectAttrs before 
 //       WorldImpl::GetObjectAttrs. The problem shows up, because I changed GetObjectAttrs
@@ -39,19 +40,20 @@ enum SpritePriority
 
 enum
 {
-    Tile_HiStairs   = 0x0A,
-    Tile_Cave       = 0x0C,
-    Tile_Ground     = 0x0E,
-    Tile_Waterfall  = 0x0F,
-    Tile_Stairs     = 0x12,
-    Tile_Rock       = 0x13,
-    Tile_Headstone  = 0x14,
-    Tile_Sand       = 0x37,
+    Mob_Cave        = 0x0C,
+    Mob_Ground      = 0x0E,
+    Mob_Stairs      = 0x12,
+    Mob_Rock        = 0x13,
+    Mob_Headstone   = 0x14,
 
-    Tile_Block      = 0,
-    Tile_Tile       = 1,
-    Tile_UW_Stairs  = 4,
-    Tile_Wall       = 8,
+    Mob_Block       = 0,
+    Mob_Tile        = 1,
+    Mob_UW_Stairs   = 4,
+
+    Tile_Rock       = 0xC8,
+    Tile_Headstone  = 0xBC,
+    Tile_Block      = 0xB0,
+    Tile_WallEdge   = 0xF6,
 };
 
 enum CollisionResponse
@@ -152,10 +154,10 @@ enum DoorType
 
 struct TileCollision
 {
-    bool    Collides;
-    uint8_t TileRef;
-    uint8_t FineCol;
-    uint8_t FineRow;
+    bool            Collides;
+    TileBehavior    TileBehavior;
+    uint8_t         FineCol;
+    uint8_t         FineRow;
 
     operator bool() const { return Collides; }
 };
@@ -164,11 +166,15 @@ struct TileCollision
 class World
 {
 public:
-    static const int Rows = 11;
-    static const int Columns = 16;
-    static const int BaseRows = 4;
-    static const int TileWidth = 16;
-    static const int TileHeight = 16;
+    static const int MobRows = 11;
+    static const int MobColumns = 16;
+    static const int Rows = 22;
+    static const int Columns = 32;
+    static const int BaseRows = 8;
+    static const int MobTileWidth = 16;
+    static const int MobTileHeight = 16;
+    static const int TileWidth = 8;
+    static const int TileHeight = 8;
     static const int TileMapWidth = Columns * TileWidth;
     static const int TileMapHeight = Rows * TileHeight;
     static const int TileMapBaseY = 64;
@@ -251,9 +257,9 @@ public:
     static Ladder* GetLadder();
     static void SetLadder( Ladder* ladder );
     static void UseRecorder();
-    static void SetTile( int x, int y, int tileType );
+    static void SetMobXY( int x, int y, int mob );
     static int GetInnerPalette();
-    static Point GetRandomWaterTile();
+    static Cell GetRandomWaterTile();
     static Object* GetObject( int slot );
     static void SetObject( int slot, Object* obj );
     static int FindEmptyMonsterSlot();

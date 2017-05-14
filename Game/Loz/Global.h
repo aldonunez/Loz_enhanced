@@ -72,6 +72,12 @@ struct Point
     short   Y;
 };
 
+struct Cell
+{
+    uint8_t Row;
+    uint8_t Col;
+};
+
 typedef uint8_t RSpot;
 
 enum ItemId
