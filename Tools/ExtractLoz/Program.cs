@@ -474,18 +474,7 @@ namespace ExtractLoz
             int x = 0;
             int y = 0;
 
-            // Even though the graphics system can make a texture smaller than 16x16, 
-            // the texture is really 16x16 underneath. Use this size to calculate the 
-            // colors.
-
-            Color[] colors = new Color[] 
-            {
-                Color.FromArgb( 0, 0, 0 ),
-                Color.FromArgb( 16, 0, 0 ),
-                Color.FromArgb( 32, 0, 0 ),
-                Color.FromArgb( 48, 0, 0 ),
-            };
-
+            Color[] colors = GetPaletteContrastColors();
             byte[] tileIndexes = new byte[4];
 
             for ( int i = 0; i < 8; i++ )
@@ -527,41 +516,34 @@ namespace ExtractLoz
             var colors = GetPaletteStandInColors();
             int row = 0;
             int col = 0;
+            byte[,] map = new byte[22, 32];
 
             for ( int i = 0; i < 78; i++ )
             {
                 if ( wallTiles[i] != 0 )
                 {
-                    int tile = wallTiles[i];
+                    byte tile = wallTiles[i];
 
-                    SeekBgTile( reader, UWTileCHR, tile );
-                    DrawTile( reader, bmp, colors,
-                        col * 8 + 8, row * 8 + 8 );
+                    map[row + 1, col + 1] = tile;
 
                     tile = wallTiles[i];
                     if ( tile != 0xf5 && tile != 0xde )
                         tile++;
-                    SeekBgTile( reader, UWTileCHR, tile );
-                    DrawTile( reader, bmp, colors,
-                        (col) * 8 + 8, (10 - row) * 8 + 80 );
+                    map[(10 - row) + 10, col + 1] = tile;
 
                     tile = wallTiles[i];
                     if ( tile == 0xde || tile == 0xdc )
                         tile++;
                     else if ( tile != 0xf5 && tile != 0xe0 )
                         tile += 2;
-                    SeekBgTile( reader, UWTileCHR, tile );
-                    DrawTile( reader, bmp, colors,
-                        (12 - col) * 8 + 128 + 16, (10 - row) * 8 + 80 );
+                    map[(10 - row) + 10, (12 - col) + 16 + 2] = tile;
 
                     tile = wallTiles[i];
                     if ( tile == 0xde || tile == 0xe0 )
                         tile++;
                     else if ( tile != 0xf5 && tile != 0xdc )
                         tile += 3;
-                    SeekBgTile( reader, UWTileCHR, tile );
-                    DrawTile( reader, bmp, colors,
-                        (12 - col) * 8 + 128 + 16, (row) * 8 + 8 );
+                    map[row + 1, (12 - col) + 16 + 2] = tile;
                 }
 
                 row++;
@@ -574,22 +556,27 @@ namespace ExtractLoz
 
             for ( int i = 0; i < 32; i++ )
             {
-                SeekBgTile( reader, UWTileCHR, 0xF6 );
-                DrawTile( reader, bmp, colors,
-                    i * 8, 0 );
-                SeekBgTile( reader, UWTileCHR, 0xF6 );
-                DrawTile( reader, bmp, colors,
-                    i * 8, 168 );
+                map[0, i] = 0xF6;
+                map[21, i] = 0xF6;
             }
 
             for ( int i = 0; i < 20; i++ )
             {
-                SeekBgTile( reader, UWTileCHR, 0xF6 );
-                DrawTile( reader, bmp, colors,
-                    0, i * 8 + 8 );
-                SeekBgTile( reader, UWTileCHR, 0xF6 );
-                DrawTile( reader, bmp, colors,
-                    248, i * 8 + 8 );
+                map[i + 1, 0] = 0xF6;
+                map[i + 1, 31] = 0xF6;
+            }
+
+            for ( int r = 0; r < 22; r++ )
+            {
+                for ( int c = 0; c < 32; c++ )
+                {
+                    byte tile = map[r, c];
+                    if ( tile != 0 )
+                    {
+                        SeekBgTile( reader, UWTileCHR, tile );
+                        DrawTile( reader, bmp, colors, c * 8, r * 8 );
+                    }
+                }
             }
 
             using ( var g = Graphics.FromImage( bmp ) )
@@ -1092,7 +1079,7 @@ namespace ExtractLoz
         const int OWColDir = 0x19D0F + 16;
         const int OWColTables = 0x15BD8 + 16;
 
-        private static void ExtractOverworldMap( Options options )
+        private static MapLayout ExtractOverworldMap( Options options )
         {
             byte[] roomCols = null;
             ushort[] colTablePtrs = null;
@@ -1107,8 +1094,9 @@ namespace ExtractLoz
                 colTablePtrs = new ushort[16];
                 for ( int i = 0; i < 16; i++ )
                 {
-                    colTablePtrs[i] = reader.ReadUInt16();
+                    colTablePtrs[i] = (ushort) (reader.ReadUInt16() - colTablePtrs[0]);
                 }
+                colTablePtrs[0] = 0;
 
                 // There are only 10 columns in the last table
                 reader.BaseStream.Position = OWColTables;
@@ -1132,13 +1120,25 @@ namespace ExtractLoz
 
                 Utility.PadStream( writer.BaseStream );
             }
+
+            MapLayout mapLayout = new MapLayout();
+
+            mapLayout.uniqueRoomCount = 124;
+            mapLayout.columnsInRoom = 16;
+            mapLayout.rowsInRoom = 11;
+            mapLayout.owLayoutFormat = true;
+            mapLayout.roomCols = roomCols;
+            mapLayout.colTablePtrs = colTablePtrs;
+            mapLayout.colTables = colTables;
+
+            return mapLayout;
         }
 
         const int UWRoomCols = 0x160DE + 16;
         const int UWColDir = 0x16704 + 16;
         const int UWColTables = 0x162D6 + 16;
 
-        private static void ExtractUnderworldMap( Options options )
+        private static MapLayout ExtractUnderworldMap( Options options )
         {
             byte[] roomCols = null;
             ushort[] colTablePtrs = null;
@@ -1153,8 +1153,9 @@ namespace ExtractLoz
                 colTablePtrs = new ushort[10];
                 for ( int i = 0; i < 10; i++ )
                 {
-                    colTablePtrs[i] = reader.ReadUInt16();
+                    colTablePtrs[i] = (ushort) (reader.ReadUInt16() - colTablePtrs[0]);
                 }
+                colTablePtrs[0] = 0;
 
                 // There are only 9 columns in the last table
                 reader.BaseStream.Position = UWColTables;
@@ -1186,6 +1187,18 @@ namespace ExtractLoz
 
                 Utility.PadStream( writer.BaseStream );
             }
+
+            MapLayout mapLayout = new MapLayout();
+
+            mapLayout.uniqueRoomCount = 64;
+            mapLayout.columnsInRoom = 12;
+            mapLayout.rowsInRoom = 7;
+            mapLayout.owLayoutFormat = false;
+            mapLayout.roomCols = roomCols;
+            mapLayout.colTablePtrs = colTablePtrs;
+            mapLayout.colTables = colTables;
+
+            return mapLayout;
         }
 
         const int UWCellarRoomCols = 0x163B4 + 16;
@@ -1227,6 +1240,15 @@ namespace ExtractLoz
 
                 Utility.PadStream( writer.BaseStream );
             }
+        }
+
+        private static void AnalyzeUniqueLayouts( Options options )
+        {
+            var owLayout = ExtractOverworldMap( options );
+            var uwLayout = ExtractUnderworldMap( options );
+
+            Analyzer.AnalyzeUniqueLayouts( owLayout, "OW", options );
+            Analyzer.AnalyzeUniqueLayouts( uwLayout, "UW", options );
         }
 
         // Outer:
@@ -2636,9 +2658,9 @@ namespace ExtractLoz
             Color[] colors = new Color[] 
             {
                 Color.FromArgb( 0, 0, 0 ),
-                Color.FromArgb( 16, 0, 0 ),
-                Color.FromArgb( 32, 0, 0 ),
-                Color.FromArgb( 48, 0, 0 ),
+                Color.FromArgb( 16, 0x80, 0x00 ),
+                Color.FromArgb( 32, 0x00, 0x80 ),
+                Color.FromArgb( 48, 0x80, 0x80 ),
             };
             return colors;
         }

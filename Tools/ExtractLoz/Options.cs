@@ -19,6 +19,7 @@ namespace ExtractLoz
         public string Function;
         public string OutPath;
         public string Error;
+        public bool AnalysisWrites;
 
         public static Options Parse( string[] args )
         {
@@ -64,6 +65,10 @@ namespace ExtractLoz
                         break;
                     }
                     i++;
+                }
+                else if ( args[i].EqualsIgnore( "-analysis-writes" ) )
+                {
+                    options.AnalysisWrites = true;
                 }
             }
 
