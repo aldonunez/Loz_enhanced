@@ -29,9 +29,9 @@ enum DamageType
     Damage_Sword        = 1,
     Damage_Boomerang    = 2,
     Damage_Arrow        = 4,
-    Damage_Unknown8__   = 8,
+    Damage_Bomb         = 8,
     Damage_MagicWave    = 0x10,
-    Damage_Bomb         = 0x20,
+    Damage_Fire         = 0x20,
 };
 
 enum TileCollisionStep
@@ -380,16 +380,27 @@ void Object::CheckBombAndFire( int slot )
     if ( obj == nullptr )
         return;
 
-    if ( obj->GetType() == Obj_Bomb && ((Bomb*) obj)->GetLifetimeState() != Bomb::Blasting )
-        return;
-
-    Point box = { 0xE, 0xE };
-    Point weaponCenter = { 8, 8 };
+    short distance;
 
     CollisionContext context;
-    context.DamageType  = Damage_Bomb;
+    context.DamageType  = Damage_Fire;
     context.WeaponSlot  = slot;
     context.Damage      = 0x10;
+    distance            = 0xE;
+
+    if ( obj->GetType() == Obj_Bomb )
+    {
+        if ( ((Bomb*) obj)->GetLifetimeState() != Bomb::Blasting )
+            return;
+
+        context.DamageType  = Damage_Bomb;
+        context.WeaponSlot  = slot;
+        context.Damage      = 0x40;
+        distance            = 0x18;
+    }
+
+    Point box = { distance, distance };
+    Point weaponCenter = { 8, 8 };
 
     if ( CheckCollisionCustomNoShove( context, box, weaponCenter ) )
     {
@@ -630,8 +641,7 @@ void Object::DealDamage( CollisionContext& context )
 
 void Object::KillObjectNormally( CollisionContext& context )
 {
-    // TODO: what deals this damage type?
-    bool allowBombDrop = context.DamageType == Damage_Unknown8__;
+    bool allowBombDrop = context.DamageType == Damage_Bomb;
 
     World::IncrementKilledObjectCount( allowBombDrop );
 
@@ -646,8 +656,8 @@ void Object::KillObjectNormally( CollisionContext& context )
 
 void Object::PlayParrySoundIfSupported( int damageType )
 {
-    if (   (invincibilityMask & Damage_Bomb) == 0
-        && (invincibilityMask & Damage_Unknown8__) == 0 )
+    if (   (invincibilityMask & Damage_Fire) == 0
+        && (invincibilityMask & Damage_Bomb) == 0 )
     {
         PlayParrySound();
     }
