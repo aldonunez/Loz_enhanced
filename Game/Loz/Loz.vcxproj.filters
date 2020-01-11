@@ -194,6 +194,7 @@
     <None Include="tileShaderVertex.glsl">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Loz.rc">
