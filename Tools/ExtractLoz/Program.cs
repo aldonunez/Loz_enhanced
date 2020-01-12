@@ -474,7 +474,7 @@ namespace ExtractLoz
             int x = 0;
             int y = 0;
 
-            Color[] colors = GetPaletteContrastColors();
+            Color[] colors = GetPaletteStandInColors();
             byte[] tileIndexes = new byte[4];
 
             for ( int i = 0; i < 8; i++ )
