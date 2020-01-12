@@ -160,6 +160,9 @@
     <ClInclude Include="WorldImpl.h" />
   </ItemGroup>
   <ItemGroup>
+    <CopyFileToFolders Include="allegro5.cfg">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
     <None Include="packages.config" />
     <None Include="tileShaderPixel.glsl">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

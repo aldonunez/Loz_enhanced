@@ -201,4 +201,7 @@
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>
+  <ItemGroup>
+    <CopyFileToFolders Include="allegro5.cfg" />
+  </ItemGroup>
 </Project>
