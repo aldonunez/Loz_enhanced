@@ -14,9 +14,7 @@ The ExtractNsf project uses the Game Music Emu library.
 
 ### How do I get set up? ###
 
-The subprojects build with Visual Studio 2010 and depend on the Allegro library (5.2) that you can get with Nuget. You’ll also need a copy of the original ROM and NSF for each game.
-
-After you check out the project, you’ll have to define two variables/macros in you personal project settings: ALLEGRO_INC_ROOT and ALLEGRO_LIB_ROOT.
+The subprojects build with Visual Studio 2010 and depend on the Allegro library (5.2) that is automatically downloaded using Nuget. You’ll also need a copy of the original ROM and NSF for each game.
 
 The remake is divided in two parts: the remade game in the Game folder, and the extractor in the Tools folder. The extractor pulls resources like graphics and data tables out of the original ROM and puts them into a format suitable for the remade game. Build and run the extractor before building and running the remade game.
 
@@ -32,6 +30,24 @@ You can build all resources with the all function. Set OutputPath to the path wh
 
 Once the resources are built, build and run the program in the bin folder.
 
+### Graphics Setting ###
+
+The game uses OpenGL by default. To use Direct3D on Windows, add a setting to the user settings
+file %APPDATA%\Loz.exe\loz.ini:
+
+```
+[graphics]
+renderer=Direct3D
+```
+
+Note that this will require that you install the shader compiler from Direct3D 9. The needed files (d3dx9_43.dll and D3DCompiler_43.dll) are not included with later versions of Windows such as Windows 10. You can get them by installing the DirectX runtime version 9; or extracting these files from it and copying them to %WINDIR%\SysWOW64.
+
+### Input Setting ###
+
+Gamepad support is enabled by way of XInput by default. To enable DirectInput, remove the joystick driver setting in allegro5.cfg, or change it to "DIRECTINPUT". This config file is in the app's folder.
+
+Be aware that I noticed a problem when enabling DirectInput in Windows 10 on one of my machines. I saw erratic behavior including slow response, random mouse movements and key presses, and unexpected changes in window focus. I haven't determined how to fix this problem or how prevalent it is.
+
 ### History ###
 
 I've been interested in remaking the first Legend of Zelda since a family friend gave me a copy of Turbo C++ when I was in eighth grade.
@@ -44,6 +60,6 @@ The way I organized the disassembly was good enough for me, but I don't feel com
 
 ### Who do I talk to? ###
 
-Repo owner: Aldo Nunez
+This software is written by Aldo Nunez (aldonunez1@gmail.com).
 
-If you would like to reach out to me, then please look me up at romhacking.net.
+Feel free to reach out to me, if you'd like to learn more about the project.
