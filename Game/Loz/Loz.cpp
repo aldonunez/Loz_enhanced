@@ -17,6 +17,8 @@
 
 const double FrameTime = 1 / 60.0;
 
+static const char GraphicsSection[] = "graphics";
+
 
 static ALLEGRO_EVENT_QUEUE* eventQ;
 static ALLEGRO_DISPLAY* display;
@@ -166,13 +168,33 @@ void AdjustForDpi( int& width, int& height )
 #endif
 }
 
+int GetGraphicsRendererDisplayFlag()
+{
+    const char* setting = al_get_config_value( globalConfig, GraphicsSection, "renderer" );
+    int flag = 0;
+
+    if ( setting != nullptr )
+    {
+        if ( 0 == _stricmp( setting, "direct3d" ) )
+            flag = ALLEGRO_DIRECT3D_INTERNAL;
+        else if ( 0 == _stricmp( setting, "opengl" ) )
+            flag = ALLEGRO_OPENGL;
+    }
+
+    return flag;
+}
+
 bool MakeDisplay()
 {
     int width = StdViewWidth * 2;
     int height = StdViewHeight * 2;
     int newFlags = ALLEGRO_RESIZABLE | ALLEGRO_PROGRAMMABLE_PIPELINE;
+    int rendererFlag = GetGraphicsRendererDisplayFlag();
 
-    newFlags |= ALLEGRO_DIRECT3D_INTERNAL;
+    if ( rendererFlag == 0 )
+        rendererFlag = ALLEGRO_OPENGL;
+
+    newFlags |= rendererFlag;
 
     al_set_new_display_flags( al_get_new_display_flags() | newFlags );
 
