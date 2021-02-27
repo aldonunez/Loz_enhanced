@@ -55,6 +55,7 @@ namespace ExtractNsf {
         }
 
         void LoadFile( String^ path );
+        void LoadMem( array<Byte>^ buffer, int size );
         void StartTrack( int trackNumber );
         void Play( int count, array<short>^ buffer );
 

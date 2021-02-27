@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Security.Cryptography;
 
 namespace ExtractLoz
 {
@@ -30,6 +31,12 @@ namespace ExtractLoz
     class Program
     {
         delegate void Extractor( Options options );
+
+        static byte[] RomMd5UProg0 =
+        {
+            0xD9, 0xA1, 0x63, 0x1D, 0x5C, 0x32, 0xD3, 0x55,
+            0x94, 0xB9, 0x48, 0x48, 0x62, 0xA2, 0x6C, 0xBA
+        };
 
         const int PrimarySquareTable = 0x1697C + 16;
         const int SecondarySquareTable = 0x169B4 + 16;
@@ -60,6 +67,8 @@ namespace ExtractLoz
                 return;
             }
 
+            CheckSupportedRom( options );
+
             Dictionary<string, Extractor> extractorMap = new Dictionary<string, Extractor>();
 
             extractorMap.Add( "overworldtiles", ExtractOverworldBundle );
@@ -86,6 +95,46 @@ namespace ExtractLoz
             else
             {
                 Console.Error.WriteLine( "Function not supported: {0}", options.Function );
+            }
+        }
+
+        private static void CheckSupportedRom( Options options )
+        {
+            if ( !File.Exists( options.RomPath ) )
+            {
+                Console.WriteLine( "ROM not found" );
+                Environment.Exit( 1 );
+            }
+
+            byte[] romImage = File.ReadAllBytes( options.RomPath );
+            byte[] hash;
+
+            if ( romImage.Length < 0x20010 ||
+                romImage[0] != 'N' || romImage[1] != 'E' || romImage[2] != 'S' || romImage[3] != 0x1A )
+            {
+                Console.WriteLine( "Input file is not an NES ROM." );
+                Environment.Exit( 1 );
+            }
+
+            using ( var hashAlgo = MD5Cng.Create() )
+            {
+                hash = hashAlgo.ComputeHash( romImage, 0x10, romImage.Length - 0x10 );
+            }
+
+            if ( !AreHashesEqual( hash, RomMd5UProg0 ) )
+            {
+                Console.WriteLine( "ROM is not supported. Pass the (U) (PRG0) version." );
+                Environment.Exit( 1 );
+            }
+
+            bool AreHashesEqual( byte[] a, byte[] b )
+            {
+                for ( int i = 0; i < a.Length; i++ )
+                {
+                    if ( a[i] != b[i] )
+                        return false;
+                }
+                return true;
             }
         }
 
@@ -157,8 +206,24 @@ namespace ExtractLoz
             }
         }
 
+        class NsfItem
+        {
+            public int Offset;
+            public int Length;
+
+            public static NsfItem ConvertFields( string[] fields )
+            {
+                NsfItem item = new NsfItem();
+                item.Offset = int.Parse( fields[0], System.Globalization.NumberStyles.HexNumber );
+                item.Length = int.Parse( fields[1], System.Globalization.NumberStyles.HexNumber );
+                return item;
+            }
+        }
+
         private static void ExtractSounds( Options options, string tableFileBase )
         {
+            byte[] nsfImage = BuildMemoryNsf( options );
+
             var outPath = options.MakeOutPath( tableFileBase + ".dat" );
             using ( var inStream = GetResourceStream( "ExtractLoz.Data." + tableFileBase + ".csv" ) )
             using ( var outWriter = new BinaryWriter( Utility.TruncateFile( outPath ) ) )
@@ -166,7 +231,7 @@ namespace ExtractLoz
                 var items = DatafileReader.ReadTable( inStream, SoundItem.ConvertFields );
                 foreach ( var item in items )
                 {
-                    ExtractSoundFile( options, item );
+                    ExtractSoundFile( options, item, nsfImage );
                     outWriter.Write( item.Begin );
                     outWriter.Write( item.End );
                     outWriter.Write( item.Slot );
@@ -179,7 +244,7 @@ namespace ExtractLoz
             }
         }
 
-        private static void ExtractSoundFile( Options options, SoundItem item )
+        private static void ExtractSoundFile( Options options, SoundItem item, byte[] nsfImage )
         {
             const int SampleRate = 44100;
             const double SampleRateMs = SampleRate / 1000.0;
@@ -190,7 +255,7 @@ namespace ExtractLoz
             using ( ExtractNsf.WaveWriter waveWriter = new ExtractNsf.WaveWriter( SampleRate, outPath ) )
             {
                 emu.SampleRate = SampleRate;
-                emu.LoadFile( options.NsfPath );
+                emu.LoadMem( nsfImage, nsfImage.Length );
                 emu.StartTrack( item.Track );
 
                 waveWriter.EnableStereo();
@@ -208,6 +273,45 @@ namespace ExtractLoz
                     emu.Play( count, buffer );
                     waveWriter.Write( buffer, count, 1 );
                 }
+            }
+        }
+
+        private static byte[] BuildMemoryNsf( Options options )
+        {
+            List<NsfItem> nsfItems;
+            int totalRomSectionSize = 0;
+
+            using ( var specStream = GetResourceStream( "ExtractLoz.Data.NsfSpec.csv" ) )
+            {
+                nsfItems = DatafileReader.ReadTable( specStream, NsfItem.ConvertFields );
+            }
+
+            foreach ( var item in nsfItems )
+            {
+                totalRomSectionSize += item.Length;
+            }
+
+            var romImage = File.ReadAllBytes( options.RomPath );
+
+            using ( var headerStream = GetResourceStream( "ExtractLoz.Data.NsfHeader.bin" ) )
+            using ( var footerStream = GetResourceStream( "ExtractLoz.Data.NsfFooter.bin" ) )
+            {
+                int nsfSize = totalRomSectionSize + (int) headerStream.Length + (int) footerStream.Length;
+                var nsfImage = new byte[nsfSize];
+                int offset = 0;
+
+                headerStream.Read( nsfImage, 0, (int) headerStream.Length );
+                offset += (int) headerStream.Length;
+
+                foreach ( var item in nsfItems )
+                {
+                    Array.Copy( romImage, item.Offset, nsfImage, offset, item.Length );
+                    offset += item.Length;
+                }
+
+                footerStream.Read( nsfImage, offset, (int) footerStream.Length );
+
+                return nsfImage;
             }
         }
 
