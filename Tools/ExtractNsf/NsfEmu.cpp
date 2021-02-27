@@ -84,6 +84,15 @@ namespace ExtractNsf {
         CheckBlarggError( emu->load_file( nativePath ) );
     }
 
+    void NsfEmu::LoadMem( array<Byte>^ buffer, int size )
+    {
+        if ( size > buffer->Length )
+            throw gcnew Exception( "buffer is smaller than size" );
+
+        pin_ptr<Byte> pinnedBuf = &buffer[0];
+        CheckBlarggError( emu->load_mem( pinnedBuf, size ) );
+    }
+
     void NsfEmu::StartTrack( int trackNumber )
     {
         CheckBlarggError( emu->start_track( trackNumber ) );
