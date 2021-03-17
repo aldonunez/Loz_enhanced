@@ -67,6 +67,8 @@ namespace ExtractLoz
                 return;
             }
 
+            Directory.CreateDirectory( options.OutPath );
+
             CheckSupportedRom( options );
 
             Dictionary<string, Extractor> extractorMap = new Dictionary<string, Extractor>();
